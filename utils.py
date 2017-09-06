@@ -64,7 +64,7 @@ Label  = namedtuple('Label',  ['name', 'color'])
 Size   = namedtuple('Size',   ['w', 'h'])
 Point  = namedtuple('Point',  ['x', 'y'])
 Sample = namedtuple('Sample', ['filename', 'boxes', 'imgsize'])
-Box    = namedtuple('Box',    ['label', 'center', 'size'])
+Box    = namedtuple('Box',    ['label', 'labelid', 'center', 'size'])
 
 #-------------------------------------------------------------------------------
 def str2bool(v):
