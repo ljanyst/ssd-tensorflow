@@ -57,72 +57,13 @@ label_defs = [
     Label('tvmonitor',   rgb2bgr((119,  11,  32)))]
 
 #-------------------------------------------------------------------------------
-def build_sample_list(root, dataset_name):
-    """
-    Build a list of samples for the VOC dataset (either trainval or test)
-    """
-    image_root  = root + '/JPEGImages/'
-    annot_root  = root + '/Annotations/'
-    annot_files = glob(annot_root + '/*xml')
-    samples     = []
-
-    #---------------------------------------------------------------------------
-    # Process each annotated sample
-    #---------------------------------------------------------------------------
-    for fn in tqdm(annot_files, desc=dataset_name, unit='samples'):
-        with open(fn, 'r') as f:
-            doc      = lxml.etree.parse(f)
-            filename = image_root+doc.xpath('/annotation/filename')[0].text
-
-            #-------------------------------------------------------------------
-            # Get the file dimensions
-            #-------------------------------------------------------------------
-            if not os.path.exists(filename):
-                continue
-
-            img     = cv2.imread(filename)
-            imgsize = Size(img.shape[1], img.shape[0])
-
-            #-------------------------------------------------------------------
-            # Get boxes for all the objects
-            #-------------------------------------------------------------------
-            boxes    = []
-            objects  = doc.xpath('/annotation/object')
-            for obj in objects:
-                #---------------------------------------------------------------
-                # Skip dificult detections if we have them labelled
-                #---------------------------------------------------------------
-                difficult = obj.xpath('difficult')
-                if difficult:
-                    difficult = int(difficult[0].text)
-                    if difficult:
-                        continue
-
-                #---------------------------------------------------------------
-                # Get the properties of the box and convert them to the
-                # proportional terms
-                #---------------------------------------------------------------
-                label = obj.xpath('name')[0].text
-                xmin  = int(float(obj.xpath('bndbox/xmin')[0].text))
-                xmax  = int(float(obj.xpath('bndbox/xmax')[0].text))
-                ymin  = int(float(obj.xpath('bndbox/ymin')[0].text))
-                ymax  = int(float(obj.xpath('bndbox/ymax')[0].text))
-                center, size = abs2prop(xmin, xmax, ymin, ymax, imgsize)
-                box = Box(label, center, size)
-                boxes.append(box)
-            if not boxes:
-                continue
-            sample = Sample(filename, boxes, imgsize)
-            samples.append(sample)
-
-    return samples
-
-#-------------------------------------------------------------------------------
 class PascalVOC2007Source:
     #---------------------------------------------------------------------------
     def __init__(self, vocid='VOC2007'):
         self.num_classes   = len(label_defs)
         self.colors        = {l.name: l.color for l in label_defs}
+        self.lid2name      = {i: l.name for i, l in enumerate(label_defs)}
+        self.lname2id      = {l.name: i for i, l in enumerate(label_defs)}
         self.num_train     = 0
         self.num_valid     = 0
         self.num_test      = 0
@@ -130,6 +71,67 @@ class PascalVOC2007Source:
         self.valid_samples = []
         self.test_samples  = []
         self.vocid         = vocid
+
+    #---------------------------------------------------------------------------
+    def __build_sample_list(self, root, dataset_name):
+        """
+        Build a list of samples for the VOC dataset (either trainval or test)
+        """
+        image_root  = root + '/JPEGImages/'
+        annot_root  = root + '/Annotations/'
+        annot_files = glob(annot_root + '/*xml')
+        samples     = []
+
+        #-----------------------------------------------------------------------
+        # Process each annotated sample
+        #-----------------------------------------------------------------------
+        for fn in tqdm(annot_files, desc=dataset_name, unit='samples'):
+            with open(fn, 'r') as f:
+                doc      = lxml.etree.parse(f)
+                filename = image_root+doc.xpath('/annotation/filename')[0].text
+
+                #---------------------------------------------------------------
+                # Get the file dimensions
+                #---------------------------------------------------------------
+                if not os.path.exists(filename):
+                    continue
+
+                img     = cv2.imread(filename)
+                imgsize = Size(img.shape[1], img.shape[0])
+
+                #---------------------------------------------------------------
+                # Get boxes for all the objects
+                #---------------------------------------------------------------
+                boxes    = []
+                objects  = doc.xpath('/annotation/object')
+                for obj in objects:
+                    #-----------------------------------------------------------
+                    # Skip dificult detections if we have them labelled
+                    #-----------------------------------------------------------
+                    difficult = obj.xpath('difficult')
+                    if difficult:
+                        difficult = int(difficult[0].text)
+                        if difficult:
+                            continue
+
+                    #-----------------------------------------------------------
+                    # Get the properties of the box and convert them to the
+                    # proportional terms
+                    #-----------------------------------------------------------
+                    label = obj.xpath('name')[0].text
+                    xmin  = int(float(obj.xpath('bndbox/xmin')[0].text))
+                    xmax  = int(float(obj.xpath('bndbox/xmax')[0].text))
+                    ymin  = int(float(obj.xpath('bndbox/ymin')[0].text))
+                    ymax  = int(float(obj.xpath('bndbox/ymax')[0].text))
+                    center, size = abs2prop(xmin, xmax, ymin, ymax, imgsize)
+                    box = Box(label, self.lname2id[label], center, size)
+                    boxes.append(box)
+                if not boxes:
+                    continue
+                sample = Sample(filename, boxes, imgsize)
+                samples.append(sample)
+
+        return samples
 
     #---------------------------------------------------------------------------
     def load_raw_data(self, data_dir, valid_fraction):
@@ -142,10 +144,10 @@ class PascalVOC2007Source:
         trainval_root = data_dir + '/trainval/VOCdevkit/'+self.vocid
         test_root     = data_dir + '/test/VOCdevkit/'+self.vocid
 
-        trainval_samples   = build_sample_list(trainval_root, 'trainval')
+        trainval_samples   = self.__build_sample_list(trainval_root, 'trainval')
         random.shuffle(trainval_samples)
         tvlen              = len(trainval_samples)
-        self.test_samples  = build_sample_list(test_root, 'test    ')
+        self.test_samples  = self.__build_sample_list(test_root, 'test    ')
         self.valid_samples = trainval_samples[:int(valid_fraction*tvlen)]
         self.train_samples = trainval_samples[int(valid_fraction*tvlen):]
 
