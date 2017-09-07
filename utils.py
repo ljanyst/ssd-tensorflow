@@ -60,11 +60,13 @@ def rgb2bgr(tpl):
     return (tpl[2], tpl[1], tpl[0])
 
 #-------------------------------------------------------------------------------
-Label  = namedtuple('Label',  ['name', 'color'])
-Size   = namedtuple('Size',   ['w', 'h'])
-Point  = namedtuple('Point',  ['x', 'y'])
-Sample = namedtuple('Sample', ['filename', 'boxes', 'imgsize'])
-Box    = namedtuple('Box',    ['label', 'labelid', 'center', 'size'])
+Label   = namedtuple('Label',   ['name', 'color'])
+Size    = namedtuple('Size',    ['w', 'h'])
+Point   = namedtuple('Point',   ['x', 'y'])
+Sample  = namedtuple('Sample',  ['filename', 'boxes', 'imgsize'])
+Box     = namedtuple('Box',     ['label', 'labelid', 'center', 'size'])
+Score   = namedtuple('Score',   ['idx', 'score'])
+Overlap = namedtuple('Overlap', ['best', 'good'])
 
 #-------------------------------------------------------------------------------
 def str2bool(v):
