@@ -29,7 +29,7 @@ from math import sqrt, log
 # It's done so that we don't have to build the whole network in memory in order
 # to pre-process the datasets.
 #-------------------------------------------------------------------------------
-SSDPreset = namedtuple('VGGPreset', ['image_size', 'num_maps', 'map_sizes',
+SSDPreset = namedtuple('SSDPreset', ['image_size', 'num_maps', 'map_sizes',
                                      'num_anchors'])
 
 SSD_PRESETS = {
