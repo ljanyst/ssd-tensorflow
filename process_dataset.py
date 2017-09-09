@@ -20,6 +20,7 @@
 #-------------------------------------------------------------------------------
 
 import argparse
+import pickle
 import sys
 import cv2
 import os
@@ -84,6 +85,7 @@ def compute_gt(data_dir, samples, anchors, num_classes, name):
     #---------------------------------------------------------------------------
     # Loop over samples
     #---------------------------------------------------------------------------
+    sample_list = []
     for sample in tqdm(samples, desc=name, unit='samples'):
         vec = np.zeros((vheight, vwidth), dtype=np.float32)
 
@@ -123,8 +125,15 @@ def compute_gt(data_dir, samples, anchors, num_classes, name):
         #-----------------------------------------------------------------------
         # Save the result
         #-----------------------------------------------------------------------
-        basefn = os.path.basename(sample.filename)
-        np.save(result_dir+basefn, vec)
+        gt_fn = result_dir+os.path.basename(sample.filename)+'.npy'
+        np.save(gt_fn, vec)
+        sample_list.append((sample, gt_fn))
+
+    #---------------------------------------------------------------------------
+    # Store the sample list
+    #---------------------------------------------------------------------------
+    with open(data_dir+'/'+name.strip()+'-samples.pkl', 'wb') as f:
+        pickle.dump(sample_list, f)
 
 #-------------------------------------------------------------------------------
 def main():
@@ -182,6 +191,20 @@ def main():
                'train')
     compute_gt(args.data_dir, source.valid_samples, anchors, source.num_classes,
                'valid')
+
+    #---------------------------------------------------------------------------
+    # Store the dataset information
+    #---------------------------------------------------------------------------
+    with open(args.data_dir+'/training-data.pkl', 'wb') as f:
+        data = {
+            'preset':      preset,
+            'num-classes': source.num_classes,
+            'colors':      source.colors,
+            'lid2name':    source.lid2name,
+            'lname2id':    source.lname2id
+        }
+        pickle.dump(data, f)
+
     return 0
 
 if __name__ == '__main__':
