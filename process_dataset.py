@@ -146,7 +146,7 @@ def main():
     parser.add_argument('--data-dir', default='pascal-voc-2007',
                         help='data directory')
     parser.add_argument('--annotate', type=str2bool, default='False',
-                        help="Annotate the date samples")
+                        help="Annotate the data samples")
     parser.add_argument('--preset', default='vgg300',
                         choices=['vgg300', 'vgg500'],
                         help="The neural network preset")
