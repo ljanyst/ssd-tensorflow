@@ -196,9 +196,11 @@ class SSDVGG:
                 name    = 'classifier{}_{}'.format(i, 6)
                 clsfier = classifier(fmap, self.num_vars, map_size, name)
                 self.__classifiers.append(clsfier)
-        output = tf.concat(self.__classifiers, axis=1)
-        self.classifier = output[:,:,:self.num_classes]
-        self.locator    = output[:,:,self.num_classes:]
+
+        with tf.variable_scope('result'):
+            self.result = tf.concat(self.__classifiers, axis=1, name='result')
+            self.classifier = self.result[:,:,:self.num_classes]
+            self.locator    = self.result[:,:,self.num_classes:]
 
     #---------------------------------------------------------------------------
     def get_optimizer(self, gt, learning_rate=0.0005):
