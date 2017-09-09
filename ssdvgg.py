@@ -201,7 +201,7 @@ class SSDVGG:
         self.locator    = output[:,:,self.num_classes:]
 
     #---------------------------------------------------------------------------
-    def get_optimizer(self, gt, learning_rate=0.0001):
+    def get_optimizer(self, gt, learning_rate=0.0005):
         #-----------------------------------------------------------------------
         # Split the ground truth tensor
         #-----------------------------------------------------------------------
