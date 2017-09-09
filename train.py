@@ -88,8 +88,9 @@ def main():
     #---------------------------------------------------------------------------
     with tf.Session() as sess:
         print('[i] Creating the model...')
-        net = SSDVGG(sess, td.preset)
-        net.build_from_vgg(args.vgg_dir, td.num_classes, progress_hook='tqdm')
+        net = SSDVGG(sess)
+        net.build_from_vgg(args.vgg_dir, td.num_classes, td.preset,
+                           progress_hook='tqdm')
 
         labels = tf.placeholder(tf.float32,
                                 shape=[None, None, td.num_classes+5])

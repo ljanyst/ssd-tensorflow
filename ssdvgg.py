@@ -68,13 +68,12 @@ def smooth_l1_loss(x):
 #-------------------------------------------------------------------------------
 class SSDVGG:
     #---------------------------------------------------------------------------
-    def __init__(self, session, preset):
+    def __init__(self, session):
         self.session = session
-        self.preset  = preset
         self.__built = False
 
     #---------------------------------------------------------------------------
-    def build_from_vgg(self, vgg_dir, num_classes, progress_hook):
+    def build_from_vgg(self, vgg_dir, num_classes, preset, progress_hook):
         """
         Build the model for training based on a pre-define vgg16 model.
         :param vgg_dir:       directory where the vgg model should be stored
@@ -85,6 +84,7 @@ class SSDVGG:
         """
         self.num_classes = num_classes+1
         self.num_vars    = num_classes+5
+        self.preset      = preset
         self.__download_vgg(vgg_dir, progress_hook)
         self.__load_vgg(vgg_dir)
         self.__build_vgg_mods()
