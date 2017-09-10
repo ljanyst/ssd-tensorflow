@@ -93,9 +93,9 @@ def compute_gt(data_dir, samples, anchors, num_classes, name):
         # For every box compute the best match and all the matches above 0.5
         # Jaccard overlap
         #-----------------------------------------------------------------------
-        overlaps = []
+        overlaps = {}
         for box in sample.boxes:
-            overlaps.append(compute_overlap(box, anchors, 0.5))
+            overlaps[box] = compute_overlap(box, anchors, 0.5)
 
         #-----------------------------------------------------------------------
         # Set up the training vector resolving conflicts in favor of a better
@@ -104,21 +104,19 @@ def compute_gt(data_dir, samples, anchors, num_classes, name):
         vec[:, num_classes]   = 1 # background class
         vec[:, num_classes+1] = 0 # x offset
         vec[:, num_classes+2] = 0 # y offset
-        vec[:, num_classes+3] = 0 # log of width scale
-        vec[:, num_classes+4] = 0 # log of height scale
+        vec[:, num_classes+3] = 0 # log width scale
+        vec[:, num_classes+4] = 0 # log height scale
 
         matches = {}
-        for i in range(len(sample.boxes)):
-            box = sample.boxes[i]
-            for overlap in overlaps[i].good:
+        for box in sample.boxes:
+            for overlap in overlaps[box].good:
                 anchor = anchors[overlap.idx]
                 process_overlap(overlap, box, anchor, matches, num_classes,
                                 vec)
 
         matches = {}
-        for i in range(len(sample.boxes)):
-            box     = sample.boxes[i]
-            overlap = overlaps[i].best
+        for box in sample.boxes:
+            overlap = overlaps[box].best
             anchor  = anchors[overlap.idx]
             process_overlap(overlap, box, anchor, matches, num_classes, vec)
 
