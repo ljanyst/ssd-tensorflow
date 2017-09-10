@@ -199,18 +199,19 @@ class SSDVGG:
 
     #---------------------------------------------------------------------------
     def __build_classifiers(self):
-        self.__classifiers = []
-        for i in range(len(self.__maps)):
-            fmap     = self.__maps[i]
-            map_size = self.preset.map_sizes[i]
-            for j in range(5):
-                name    = 'classifier{}_{}'.format(i, j)
-                clsfier = classifier(fmap, self.num_vars, map_size, name)
-                self.__classifiers.append(clsfier)
-            if i < len(self.__maps)-1:
-                name    = 'classifier{}_{}'.format(i, 6)
-                clsfier = classifier(fmap, self.num_vars, map_size, name)
-                self.__classifiers.append(clsfier)
+        with tf.variable_scope('classifiers'):
+            self.__classifiers = []
+            for i in range(len(self.__maps)):
+                fmap     = self.__maps[i]
+                map_size = self.preset.map_sizes[i]
+                for j in range(5):
+                    name    = 'classifier{}_{}'.format(i, j)
+                    clsfier = classifier(fmap, self.num_vars, map_size, name)
+                    self.__classifiers.append(clsfier)
+                if i < len(self.__maps)-1:
+                    name    = 'classifier{}_{}'.format(i, 5)
+                    clsfier = classifier(fmap, self.num_vars, map_size, name)
+                    self.__classifiers.append(clsfier)
 
         with tf.variable_scope('output'):
             output      = tf.concat(self.__classifiers, axis=1, name='output')
