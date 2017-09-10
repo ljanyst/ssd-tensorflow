@@ -121,50 +121,49 @@ def get_anchors_for_preset(preset):
     return anchors
 
 #-------------------------------------------------------------------------------
-def jaccard_overlap(params1, params2):
-    xmin1, xmax1, ymin1, ymax1 = params1
-    xmin2, xmax2, ymin2, ymax2 = params2
-
-    if xmax2 <= xmin1: return 0
-    if xmax1 <= xmin2: return 0
-    if ymax2 <= ymin1: return 0
-    if ymax1 <= ymin2: return 0
-
-    xmin = max(xmin1, xmin2)
-    xmax = min(xmax1, xmax2)
-    ymin = max(ymin1, ymin2)
-    ymax = min(ymax1, ymax2)
-
-    w = xmax-xmin
-    h = ymax-ymin
-    intersection = float(w*h)
-
-    w1 = xmax1-xmin1
-    h1 = ymax1-ymin1
-    w2 = xmax2-xmin2
-    h2 = ymax2-ymin2
-
-    union = float(w1*h1) + float(w2*h2) - intersection
-
-    return intersection/union
+def anchors2array(anchors, img_size):
+    """
+    Computes a numpy array out of absolute anchor params (img_size is needed
+    as a reference)
+    """
+    arr = np.zeros((len(anchors), 4))
+    for i in range(len(anchors)):
+        anchor = anchors[i]
+        xmin, xmax, ymin, ymax = prop2abs(anchor.center, anchor.size, img_size)
+        arr[i] = np.array([xmin, xmax, ymin, ymax])
+    return arr
 
 #-------------------------------------------------------------------------------
-def compute_overlap(box, anchors, threshold):
-    imgsize = Size(1000, 1000)
-    bparams = prop2abs(box.center, box.size, imgsize)
-    best    = None
-    good    = []
-    for i in range(len(anchors)):
-        anchor  = anchors[i]
-        aparams = prop2abs(anchor.center, anchor.size, imgsize)
-        jaccard = jaccard_overlap(bparams, aparams)
-        if jaccard == 0:
-            continue
-        elif not best or best.score < jaccard:
-            best = Score(i, jaccard)
+def box2array(box, img_size):
+    xmin, xmax, ymin, ymax = prop2abs(box.center, box.size, img_size)
+    return np.array([xmin, xmax, ymin, ymax])
 
-        if jaccard > threshold:
-            good.append(Score(i, jaccard))
+#-------------------------------------------------------------------------------
+def compute_overlap(box_arr, anchors_arr, threshold):
+
+    areaa = (anchors_arr[:, 1]-anchors_arr[:, 0]+1) * \
+            (anchors_arr[:, 3]-anchors_arr[:, 2]+1)
+    areab = (box_arr[1]-box_arr[0]+1) * (box_arr[3]-box_arr[2]+1)
+
+    xxmin = np.maximum(box_arr[0], anchors_arr[:, 0])
+    xxmax = np.minimum(box_arr[1], anchors_arr[:, 1])
+    yymin = np.maximum(box_arr[2], anchors_arr[:, 2])
+    yymax = np.minimum(box_arr[3], anchors_arr[:, 3])
+
+    w = np.maximum(0, xxmax-xxmin+1)
+    h = np.maximum(0, yymax-yymin+1)
+    intersection = w*h
+    union        = areab+areaa-intersection
+    iou          = intersection/union
+    overlap      = iou > threshold
+
+    good_idxs    = np.nonzero(overlap)[0]
+    best_idx     = np.argmax(iou)
+    best         = Score(best_idx, iou[best_idx])
+    good         = []
+
+    for idx in good_idxs:
+        good.append(Score(idx, iou[idx]))
 
     return Overlap(best, good)
 
@@ -286,7 +285,7 @@ def non_maximum_suppression(boxes, overlap_threshold):
         union    = area[i]+area[idxs]-intersection
         iou      = intersection/union
         overlap  = iou > overlap_threshold
-        suppress = np.nonzero(overlap)
+        suppress = np.nonzero(overlap)[0]
         idxs     = np.delete(idxs, suppress)
 
     #---------------------------------------------------------------------------

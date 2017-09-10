@@ -28,8 +28,8 @@ import os
 import numpy as np
 
 from ssdutils import get_preset_by_name, get_anchors_for_preset, compute_overlap
-from ssdutils import compute_location
-from utils import load_data_source, str2bool, prop2abs
+from ssdutils import compute_location, anchors2array, box2array
+from utils import load_data_source, str2bool, prop2abs, Size
 from tqdm import tqdm
 
 #-------------------------------------------------------------------------------
@@ -82,6 +82,9 @@ def compute_gt(data_dir, samples, anchors, num_classes, name):
     vheight = len(anchors)
     vwidth  = num_classes + 5 # background class + location offsets
 
+    img_size = Size(1000, 1000)
+    anchors_arr  = anchors2array(anchors, img_size)
+
     #---------------------------------------------------------------------------
     # Loop over samples
     #---------------------------------------------------------------------------
@@ -95,7 +98,8 @@ def compute_gt(data_dir, samples, anchors, num_classes, name):
         #-----------------------------------------------------------------------
         overlaps = {}
         for box in sample.boxes:
-            overlaps[box] = compute_overlap(box, anchors, 0.5)
+            box_arr = box2array(box, img_size)
+            overlaps[box] = compute_overlap(box_arr, anchors_arr, 0.5)
 
         #-----------------------------------------------------------------------
         # Set up the training vector resolving conflicts in favor of a better
@@ -182,8 +186,8 @@ def main():
     #---------------------------------------------------------------------------
     # Create the input for the training objective
     #---------------------------------------------------------------------------
-    preset  = get_preset_by_name(args.preset)
-    anchors = get_anchors_for_preset(preset)
+    preset   = get_preset_by_name(args.preset)
+    anchors  = get_anchors_for_preset(preset)
     print('[i] Computing the ground truth...')
     compute_gt(args.data_dir, source.train_samples, anchors, source.num_classes,
                'train')
