@@ -186,7 +186,7 @@ def decode_location(box, anchor):
     return Point(x, y), Size(w, h)
 
 #-------------------------------------------------------------------------------
-def decode_boxes(pred, anchors, lid2name = {}):
+def decode_boxes(pred, anchors, confidence_threshold = 0.75, lid2name = {}):
     """
     Decode boxes from the neural net predictions.
     Label names are decoded using the lid2name dictionary - the id to name
@@ -202,10 +202,14 @@ def decode_boxes(pred, anchors, lid2name = {}):
     detections  = np.nonzero(box_class != bg_class)[0]
 
     #---------------------------------------------------------------------------
-    # Decode coordinates of each box
+    # Decode coordinates of each box with confidence over a threshold
     #---------------------------------------------------------------------------
     boxes = []
     for idx in detections:
+        confidence   = pred[idx, box_class[idx]]
+        if confidence < confidence_threshold:
+            continue
+
         center, size = decode_location(pred[idx, num_classes:], anchors[idx])
         cid = box_class[idx]
         cname = None
