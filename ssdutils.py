@@ -21,7 +21,7 @@
 import numpy as np
 
 from utils import Size, Point, Overlap, Score, Box, prop2abs, normalize_box
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from math import sqrt, log, exp
 
 #-------------------------------------------------------------------------------
@@ -219,3 +219,92 @@ def decode_boxes(pred, anchors, confidence_threshold = 0.99, lid2name = {}):
         boxes.append(det)
 
     return boxes
+
+#-------------------------------------------------------------------------------
+def non_maximum_suppression(boxes, overlap_threshold):
+    #---------------------------------------------------------------------------
+    # Convert to absolute coordinates and to a more convenient format
+    #---------------------------------------------------------------------------
+    xmin = []
+    xmax = []
+    ymin = []
+    ymax = []
+    conf = []
+    img_size = Size(1000, 1000)
+
+    for box in boxes:
+        params = prop2abs(box[1].center, box[1].size, img_size)
+        xmin.append(params[0])
+        xmax.append(params[1])
+        ymin.append(params[2])
+        ymax.append(params[3])
+        conf.append(box[0])
+
+    xmin = np.array(xmin)
+    xmax = np.array(xmax)
+    ymin = np.array(ymin)
+    ymax = np.array(ymax)
+    conf = np.array(conf)
+
+    #---------------------------------------------------------------------------
+    # Compute the area of each box and sort the indices by confidence level
+    # (lowest confidence first first).
+    #---------------------------------------------------------------------------
+    area = (xmax-xmin+1) * (ymax-ymin+1)
+    idxs = np.argsort(conf)
+    pick = []
+
+    #---------------------------------------------------------------------------
+    # Loop until we still have indices to process
+    #---------------------------------------------------------------------------
+    while len(idxs) > 0:
+        #-----------------------------------------------------------------------
+        # Grab the last index (ie. the most confident detection), remove it from
+        # the list of indices to process, and put it on the list of picks
+        #-----------------------------------------------------------------------
+        last = idxs.shape[0]-1
+        i    = idxs[last]
+        idxs = np.delete(idxs, last)
+        pick.append(i)
+        suppress = []
+
+        #-----------------------------------------------------------------------
+        # Figure out the intersection with the remaining windows
+        #-----------------------------------------------------------------------
+        xxmin = np.maximum(xmin[i], xmin[idxs])
+        xxmax = np.minimum(xmax[i], xmax[idxs])
+        yymin = np.maximum(ymin[i], ymin[idxs])
+        yymax = np.minimum(ymax[i], ymax[idxs])
+
+        w = np.maximum(0, xxmax-xxmin+1)
+        h = np.maximum(0, yymax-yymin+1)
+        intersection = w*h
+
+        #-----------------------------------------------------------------------
+        # Compute IOU and suppress indices with IOU higher than a threshold
+        #-----------------------------------------------------------------------
+        union    = area[i]+area[idxs]-intersection
+        iou      = intersection/union
+        overlap  = iou > overlap_threshold
+        suppress = np.nonzero(overlap)
+        idxs     = np.delete(idxs, suppress)
+
+    #---------------------------------------------------------------------------
+    # Return the selected boxes
+    #---------------------------------------------------------------------------
+    selected = []
+    for i in pick:
+        selected.append(boxes[i])
+
+    return selected
+
+#-------------------------------------------------------------------------------
+def suppress_overlaps(boxes):
+    class_boxes    = defaultdict(list)
+    selected_boxes = []
+    for box in boxes:
+        class_boxes[box[1].labelid].append(box)
+
+    for k, v in class_boxes.items():
+        selected_boxes += non_maximum_suppression(v, 0.45)
+    return selected_boxes
