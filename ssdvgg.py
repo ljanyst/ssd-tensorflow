@@ -46,7 +46,8 @@ def conv_map(x, size, shape, stride, name, padding='SAME'):
         b = tf.Variable(tf.zeros(size), name='biases')
         x = tf.nn.conv2d(x, w, strides=[1, stride, stride, 1], padding=padding)
         x = tf.nn.bias_add(x, b)
-        return tf.nn.relu(x)
+        x = tf.nn.relu(x)
+    return x
 
 #-------------------------------------------------------------------------------
 def classifier(x, size, mapsize, name):
@@ -57,7 +58,8 @@ def classifier(x, size, mapsize, name):
         b = tf.Variable(tf.zeros(size), name='biases')
         x = tf.nn.conv2d(x, w, strides=[1, 1, 1, 1], padding='SAME')
         x = tf.nn.bias_add(x, b)
-    return tf.reshape(x, [-1, mapsize.w*mapsize.h, size])
+        x = tf.reshape(x, [-1, mapsize.w*mapsize.h, size])
+    return x
 
 #-------------------------------------------------------------------------------
 def smooth_l1_loss(x):
