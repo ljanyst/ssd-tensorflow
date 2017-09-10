@@ -53,7 +53,7 @@ def annotate(data_dir, samples, colors, sample_name):
                                               sample.imgsize)
             cv2.rectangle(img, (xmin, ymin), (xmax, ymax),
                           colors[box.label], 2)
-            cv2.rectangle(img, (xmin-1, ymin), (xmax, ymin-20),
+            cv2.rectangle(img, (xmin-1, ymin), (xmax+1, ymin-20),
                           colors[box.label], cv2.FILLED)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(img, box.label, (xmin+5, ymin-5), font, 0.5,
