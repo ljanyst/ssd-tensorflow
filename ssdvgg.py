@@ -225,20 +225,21 @@ class SSDVGG:
 
     #---------------------------------------------------------------------------
     def get_optimizer(self, gt, learning_rate=0.0005):
-        #-----------------------------------------------------------------------
-        # Split the ground truth tensor
-        #-----------------------------------------------------------------------
-        # Classification ground truth tensor
-        # Shape: (batch_size, num_anchors, num_classes)
-        gt_cl  = gt[:,:,:self.num_classes]
+        with tf.variable_scope('ground_truth'):
+            #-------------------------------------------------------------------
+            # Split the ground truth tensor
+            #-------------------------------------------------------------------
+            # Classification ground truth tensor
+            # Shape: (batch_size, num_anchors, num_classes)
+            gt_cl = gt[:,:,:self.num_classes]
 
-        # Localization ground truth tensor
-        # Shape: (batch_size, num_anchors, 4)
-        gt_loc = gt[:,:,self.num_classes:]
+            # Localization ground truth tensor
+            # Shape: (batch_size, num_anchors, 4)
+            gt_loc = gt[:,:,self.num_classes:]
 
-        # Batch size
-        # Shape: scalar
-        batch_size = tf.shape(gt_cl)[0]
+            # Batch size
+            # Shape: scalar
+            batch_size = tf.shape(gt_cl)[0]
 
         #-----------------------------------------------------------------------
         # Compute match counters
