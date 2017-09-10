@@ -20,7 +20,7 @@
 
 import numpy as np
 
-from utils import Size, Point, Overlap, Score, Box, prop2abs
+from utils import Size, Point, Overlap, Score, Box, prop2abs, normalize_box
 from collections import namedtuple
 from math import sqrt, log, exp
 
@@ -215,6 +215,6 @@ def decode_boxes(pred, anchors, confidence_threshold = 0.75, lid2name = {}):
         cname = None
         if cid in lid2name:
             cname = lid2name[cid]
-        boxes.append(Box(cname, cid, center, size))
+        boxes.append(normalize_box(Box(cname, cid, center, size)))
 
     return boxes

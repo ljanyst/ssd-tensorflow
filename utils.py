@@ -105,3 +105,14 @@ def prop2abs(center, size, imgsize):
     cx      = center.x*imgsize.w
     cy      = center.y*imgsize.h
     return int(cx-width2), int(cx+width2), int(cy-height2), int(cy+height2)
+
+#-------------------------------------------------------------------------------
+def normalize_box(box):
+    img_size = Size(1000, 1000)
+    xmin, xmax, ymin, ymax = prop2abs(box.center, box.size, img_size)
+    xmin = max(xmin, 0)
+    xmax = min(xmax, img_size.w-1)
+    ymin = max(ymin, 0)
+    ymax = min(ymax, img_size.h-1)
+    center, size = abs2prop(xmin, xmax, ymin, ymax, img_size)
+    return Box(box.label, box.labelid, center, size)
