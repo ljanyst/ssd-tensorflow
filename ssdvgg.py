@@ -94,6 +94,19 @@ class SSDVGG:
         self.__built = True
 
     #---------------------------------------------------------------------------
+    def build_from_metagraph(self, metagraph_file, checkpoint_file):
+        """
+        Build the model for inference from a metagraph shapshot and weights
+        checkpoint.
+        """
+        sess = self.session
+        saver = tf.train.import_meta_graph(metagraph_file)
+        saver.restore(sess, checkpoint_file)
+        self.image_input = sess.graph.get_tensor_by_name('image_input:0')
+        self.keep_prob   = sess.graph.get_tensor_by_name('keep_prob:0')
+        self.result      = sess.graph.get_tensor_by_name('result/result:0')
+
+    #---------------------------------------------------------------------------
     def __download_vgg(self, vgg_dir, progress_hook):
         #-----------------------------------------------------------------------
         # Check if the model needs to be downloaded
