@@ -212,10 +212,15 @@ class SSDVGG:
                 clsfier = classifier(fmap, self.num_vars, map_size, name)
                 self.__classifiers.append(clsfier)
 
+        with tf.variable_scope('output'):
+            output      = tf.concat(self.__classifiers, axis=1, name='output')
+            self.logits = output[:,:,:self.num_classes]
+
         with tf.variable_scope('result'):
-            self.result = tf.concat(self.__classifiers, axis=1, name='result')
-            self.classifier = self.result[:,:,:self.num_classes]
-            self.locator    = self.result[:,:,self.num_classes:]
+            self.classifier = tf.nn.softmax(self.logits)
+            self.locator    = output[:,:,self.num_classes:]
+            self.result     = tf.concat([self.classifier, self.locator],
+                                        axis=-1, name='result')
 
     #---------------------------------------------------------------------------
     def get_optimizer(self, gt, learning_rate=0.0005):
@@ -271,7 +276,7 @@ class SSDVGG:
             # Cross-entropy tensor - all of the values are non-negative
             # Shape: (batch_size, num_anchors)
             ce = tf.nn.softmax_cross_entropy_with_logits(labels=gt_cl,
-                                                         logits=self.classifier)
+                                                         logits=self.logits)
 
             #-------------------------------------------------------------------
             # Sum up the loss of all the positive anchors
