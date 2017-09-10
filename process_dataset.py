@@ -104,8 +104,8 @@ def compute_gt(data_dir, samples, anchors, num_classes, name):
         vec[:, num_classes]   = 1 # background class
         vec[:, num_classes+1] = 0 # x offset
         vec[:, num_classes+2] = 0 # y offset
-        vec[:, num_classes+3] = 1 # width scale
-        vec[:, num_classes+4] = 1 # height scale
+        vec[:, num_classes+3] = 0 # log of width scale
+        vec[:, num_classes+4] = 0 # log of height scale
 
         matches = {}
         for i in range(len(sample.boxes)):
