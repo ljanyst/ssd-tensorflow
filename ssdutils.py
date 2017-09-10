@@ -20,9 +20,9 @@
 
 import numpy as np
 
-from utils import Size, Point, Overlap, Score, prop2abs
+from utils import Size, Point, Overlap, Score, Box, prop2abs
 from collections import namedtuple
-from math import sqrt, log
+from math import sqrt, log, exp
 
 #-------------------------------------------------------------------------------
 # Define the flavors of SSD that we're going to use and it's various properties.
@@ -176,3 +176,41 @@ def compute_location(box, anchor):
     arr[2] = log(box.size.w/anchor.size.w)
     arr[3] = log(box.size.h/anchor.size.h)
     return arr
+
+#-------------------------------------------------------------------------------
+def decode_location(box, anchor):
+    x = box[0] * anchor.size.w + anchor.center.x
+    y = box[1] * anchor.size.h + anchor.center.y
+    w = exp(box[2]) * anchor.size.w
+    h = exp(box[3]) * anchor.size.h
+    return Point(x, y), Size(w, h)
+
+#-------------------------------------------------------------------------------
+def decode_boxes(pred, anchors, lid2name = {}):
+    """
+    Decode boxes from the neural net predictions.
+    Label names are decoded using the lid2name dictionary - the id to name
+    translation is not done if the corresponding key does not exist.
+    """
+
+    #---------------------------------------------------------------------------
+    # Find the detections
+    #---------------------------------------------------------------------------
+    num_classes = pred.shape[1]-4
+    bg_class    = num_classes-1
+    box_class   = np.argmax(pred[:, :num_classes], axis=1)
+    detections  = np.nonzero(box_class != bg_class)[0]
+
+    #---------------------------------------------------------------------------
+    # Decode coordinates of each box
+    #---------------------------------------------------------------------------
+    boxes = []
+    for idx in detections:
+        center, size = decode_location(pred[idx, num_classes:], anchors[idx])
+        cid = box_class[idx]
+        cname = None
+        if cid in lid2name:
+            cname = lid2name[cid]
+        boxes.append(Box(cname, cid, center, size))
+
+    return boxes
