@@ -149,6 +149,8 @@ def main():
                         help='data directory')
     parser.add_argument('--annotate', type=str2bool, default='False',
                         help="Annotate the data samples")
+    parser.add_argument('--compute-gt', type=str2bool, default='True',
+                        help="Compute the ground truth matrices")
     parser.add_argument('--preset', default='vgg300',
                         choices=['vgg300', 'vgg500'],
                         help="The neural network preset")
@@ -157,6 +159,7 @@ def main():
     print('[i] Data source:          ', args.data_source)
     print('[i] Data directory:       ', args.data_dir)
     print('[i] Annotate:             ', args.annotate)
+    print('[i] Compute ground truth: ', args.compute_gt)
     print('[i] Preset:               ', args.preset)
 
     #---------------------------------------------------------------------------
@@ -187,26 +190,27 @@ def main():
     #---------------------------------------------------------------------------
     # Create the input for the training objective
     #---------------------------------------------------------------------------
-    preset   = get_preset_by_name(args.preset)
-    anchors  = get_anchors_for_preset(preset)
-    print('[i] Computing the ground truth...')
-    compute_gt(args.data_dir, source.train_samples, anchors, source.num_classes,
-               'train')
-    compute_gt(args.data_dir, source.valid_samples, anchors, source.num_classes,
-               'valid')
+    if args.compute_gt:
+        preset   = get_preset_by_name(args.preset)
+        anchors  = get_anchors_for_preset(preset)
+        print('[i] Computing the ground truth...')
+        compute_gt(args.data_dir, source.train_samples, anchors,
+                   source.num_classes, 'train')
+        compute_gt(args.data_dir, source.valid_samples, anchors,
+                   source.num_classes, 'valid')
 
-    #---------------------------------------------------------------------------
-    # Store the dataset information
-    #---------------------------------------------------------------------------
-    with open(args.data_dir+'/training-data.pkl', 'wb') as f:
-        data = {
-            'preset':      preset,
-            'num-classes': source.num_classes,
-            'colors':      source.colors,
-            'lid2name':    source.lid2name,
-            'lname2id':    source.lname2id
-        }
-        pickle.dump(data, f)
+        #-----------------------------------------------------------------------
+        # Store the dataset information
+        #-----------------------------------------------------------------------
+        with open(args.data_dir+'/training-data.pkl', 'wb') as f:
+            data = {
+                'preset':      preset,
+                'num-classes': source.num_classes,
+                'colors':      source.colors,
+                'lid2name':    source.lid2name,
+                'lname2id':    source.lname2id
+            }
+            pickle.dump(data, f)
 
     return 0
 
