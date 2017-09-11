@@ -29,8 +29,9 @@ import os
 import tensorflow as tf
 import numpy as np
 
+from ssdutils import get_anchors_for_preset, decode_boxes, suppress_overlaps
 from ssdvgg import SSDVGG
-from utils import str2bool, load_data_source
+from utils import str2bool, load_data_source, draw_box
 from tqdm import tqdm
 
 #-------------------------------------------------------------------------------
@@ -43,7 +44,7 @@ def sample_generator(samples, image_size, batch_size):
         for image_file in files:
             image = cv2.resize(cv2.imread(image_file), image_size)
             images.append(image.astype(np.float32))
-            names.append(os.path.basename(image_file))
+            names.append(image_file)
         yield np.array(images), names
 
 #-------------------------------------------------------------------------------
@@ -100,8 +101,11 @@ def main():
     try:
         with open(args.training_data, 'rb') as f:
             data = pickle.load(f)
-        preset     = data['preset']
+        preset = data['preset']
+        colors = data['colors']
+        lid2name = data['lid2name']
         image_size = preset.image_size
+        anchors = get_anchors_for_preset(preset)
     except (FileNotFoundError, IOError, KeyError) as e:
         print('[!] Unable to load training data:', str(e))
         return 1
@@ -176,15 +180,29 @@ def main():
                       desc=description, unit='batches'):
             feed = {net.image_input:  x,
                     net.keep_prob:    1}
-            boxes = sess.run(net.result, feed_dict=feed)
+            enc_boxes = sess.run(net.result, feed_dict=feed)
 
             #-------------------------------------------------------------------
-            # Dump the prediction
+            # Annotate the samples
             #-------------------------------------------------------------------
-            if args.annotate and args.dump_prediction:
+            if args.annotate:
                 for i in range(len(names)):
-                    fn = args.output_dir+'/'+names[i]+'.npy'
-                    np.save(fn, boxes[i])
+                    boxes = decode_boxes(enc_boxes[i], anchors, 0.99, lid2name)
+                    boxes = suppress_overlaps(boxes)
+                    img = cv2.imread(names[i])
+                    for box in boxes:
+                        draw_box(img, box[1], colors[box[1].label])
+                    fn = args.output_dir+'/'+os.path.basename(names[i])
+                    cv2.imwrite(fn, img)
+
+                #---------------------------------------------------------------
+                # Dump the predictions
+                #---------------------------------------------------------------
+                if args.dump_prediction:
+                    for i in range(len(names)):
+                        base_name = os.path.basename(names[i])
+                        fn = args.output_dir+'/'+base_name+'.npy'
+                        np.save(fn, enc_boxes[i])
 
     print('[i] All done.')
     return 0
