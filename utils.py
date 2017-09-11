@@ -116,3 +116,13 @@ def normalize_box(box):
     ymax = min(ymax, img_size.h-1)
     center, size = abs2prop(xmin, xmax, ymin, ymax, img_size)
     return Box(box.label, box.labelid, center, size)
+
+#-------------------------------------------------------------------------------
+def draw_box(img, box, color):
+    img_size = Size(img.shape[1], img.shape[0])
+    xmin, xmax, ymin, ymax = prop2abs(box.center, box.size, img_size)
+    cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color, 2)
+    cv2.rectangle(img, (xmin-1, ymin), (xmax+1, ymin-20), color, cv2.FILLED)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(img, box.label, (xmin+5, ymin-5), font, 0.5,
+                (255, 255, 255), 1, cv2.LINE_AA)

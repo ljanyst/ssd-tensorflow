@@ -29,7 +29,7 @@ import numpy as np
 
 from ssdutils import get_preset_by_name, get_anchors_for_preset, compute_overlap
 from ssdutils import compute_location, anchors2array, box2array
-from utils import load_data_source, str2bool, prop2abs, Size
+from utils import load_data_source, str2bool, prop2abs, Size, draw_box
 from tqdm import tqdm
 
 #-------------------------------------------------------------------------------
@@ -49,15 +49,7 @@ def annotate(data_dir, samples, colors, sample_name):
         img    = cv2.imread(sample.filename)
         basefn = os.path.basename(sample.filename)
         for box in sample.boxes:
-            xmin, xmax, ymin, ymax = prop2abs(box.center, box.size,
-                                              sample.imgsize)
-            cv2.rectangle(img, (xmin, ymin), (xmax, ymax),
-                          colors[box.label], 2)
-            cv2.rectangle(img, (xmin-1, ymin), (xmax+1, ymin-20),
-                          colors[box.label], cv2.FILLED)
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(img, box.label, (xmin+5, ymin-5), font, 0.5,
-                        (255, 255, 255), 1, cv2.LINE_AA)
+            draw_box(img, box, colors[box.label])
         cv2.imwrite(result_dir+basefn, img)
 
 #-------------------------------------------------------------------------------
