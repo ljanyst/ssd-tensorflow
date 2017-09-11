@@ -30,7 +30,7 @@ import tensorflow as tf
 import numpy as np
 
 from ssdvgg import SSDVGG
-from utils import str2bool
+from utils import str2bool, load_data_source
 from tqdm import tqdm
 
 #-------------------------------------------------------------------------------
@@ -63,9 +63,13 @@ def main():
     parser.add_argument('--output-dir', default='test-output',
                         help='directory for the resulting images')
     parser.add_argument('--annotate', type=str2bool, default='False',
-                        help="Annotate the date samples")
+                        help="Annotate the data samples")
     parser.add_argument('--dump-prediction', type=str2bool, default='False',
-                        help="Annotate the date samples")
+                        help="Dump raw predictions")
+    parser.add_argument('--data-source', default=None,
+                        help='Use test files from the data source')
+    parser.add_argument('--data-dir', default='pascal-voc-2007',
+                        help='Use test files from the data source')
     parser.add_argument('--batch-size', type=int, default=32,
                         help='batch size')
     args = parser.parse_args()
@@ -103,18 +107,40 @@ def main():
         return 1
 
     #---------------------------------------------------------------------------
+    # Load the data source if defined
+    #---------------------------------------------------------------------------
+    source = None
+    if args.data_source:
+        print('[i] Configuring the data source...')
+        try:
+            source = load_data_source(args.data_source)
+            source.load_test_data(args.data_dir)
+            print('[i] # testing samples:    ', source.num_test)
+            print('[i] # classes:            ', source.num_classes)
+        except (ImportError, AttributeError, RuntimeError) as e:
+            print('[!] Unable to load data source:', str(e))
+            return 1
+
+    #---------------------------------------------------------------------------
     # Create a list of files to analyse and make sure that the output directory
     # exists
     #---------------------------------------------------------------------------
     files = []
-    if args.annotate:
+
+    if source:
+        for sample in source.test_samples:
+            files.append(sample.filename)
+
+    if args.annotate and not source:
         if args.files:
-            files = list(filter(lambda x: os.path.exists(x), args.files))
+            files = args.files
 
         if not files:
             print('[!] No files specified')
             return 1
 
+    files = list(filter(lambda x: os.path.exists(x), files))
+    if files:
         if not os.path.exists(args.output_dir):
             os.makedirs(args.output_dir)
 
@@ -128,6 +154,8 @@ def main():
     print('[i] Image size:        ', image_size)
     print('[i] Number of files:   ', len(files))
     print('[i] Batch size:        ', args.batch_size)
+    print('[i] Data source:       ', args.data_source)
+    print('[i] Data directory:    ', args.data_dir)
 
     #---------------------------------------------------------------------------
     # Create the network
