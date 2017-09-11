@@ -139,8 +139,7 @@ def box2array(box, img_size):
     return np.array([xmin, xmax, ymin, ymax])
 
 #-------------------------------------------------------------------------------
-def compute_overlap(box_arr, anchors_arr, threshold):
-
+def jaccard_overlap(box_arr, anchors_arr):
     areaa = (anchors_arr[:, 1]-anchors_arr[:, 0]+1) * \
             (anchors_arr[:, 3]-anchors_arr[:, 2]+1)
     areab = (box_arr[1]-box_arr[0]+1) * (box_arr[3]-box_arr[2]+1)
@@ -153,14 +152,18 @@ def compute_overlap(box_arr, anchors_arr, threshold):
     w = np.maximum(0, xxmax-xxmin+1)
     h = np.maximum(0, yymax-yymin+1)
     intersection = w*h
-    union        = areab+areaa-intersection
-    iou          = intersection/union
-    overlap      = iou > threshold
+    union = areab+areaa-intersection
+    return intersection/union
 
-    good_idxs    = np.nonzero(overlap)[0]
-    best_idx     = np.argmax(iou)
-    best         = Score(best_idx, iou[best_idx])
-    good         = []
+#-------------------------------------------------------------------------------
+def compute_overlap(box_arr, anchors_arr, threshold):
+    iou = jaccard_overlap(box_arr, anchors_arr)
+    overlap = iou > threshold
+
+    good_idxs = np.nonzero(overlap)[0]
+    best_idx  = np.argmax(iou)
+    best = Score(best_idx, iou[best_idx])
+    good = []
 
     for idx in good_idxs:
         good.append(Score(idx, iou[idx]))
@@ -199,13 +202,14 @@ def decode_boxes(pred, anchors, confidence_threshold = 0.99, lid2name = {}):
     bg_class    = num_classes-1
     box_class   = np.argmax(pred[:, :num_classes], axis=1)
     detections  = np.nonzero(box_class != bg_class)[0]
+    print(detections)
 
     #---------------------------------------------------------------------------
     # Decode coordinates of each box with confidence over a threshold
     #---------------------------------------------------------------------------
     boxes = []
     for idx in detections:
-        confidence   = pred[idx, box_class[idx]]
+        confidence = pred[idx, box_class[idx]]
         if confidence < confidence_threshold:
             continue
 
