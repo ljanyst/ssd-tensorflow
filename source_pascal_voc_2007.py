@@ -134,20 +134,18 @@ class PascalVOC2007Source:
         return samples
 
     #---------------------------------------------------------------------------
-    def load_raw_data(self, data_dir, valid_fraction):
+    def load_trainval_data(self, data_dir, valid_fraction):
         """
-        Load the raw data
+        Load the training and validation data
         :param data_dir:       the directory where the dataset's file are stored
         :param valid_fraction: what franction of the dataset should be used
                                as a validation sample
         """
         trainval_root = data_dir + '/trainval/VOCdevkit/'+self.vocid
-        test_root     = data_dir + '/test/VOCdevkit/'+self.vocid
 
         trainval_samples   = self.__build_sample_list(trainval_root, 'trainval')
         random.shuffle(trainval_samples)
         tvlen              = len(trainval_samples)
-        self.test_samples  = self.__build_sample_list(test_root, 'test    ')
         self.valid_samples = trainval_samples[:int(valid_fraction*tvlen)]
         self.train_samples = trainval_samples[int(valid_fraction*tvlen):]
 
@@ -155,11 +153,22 @@ class PascalVOC2007Source:
             raise RuntimeError('No training samples found in ' + data_dir)
         if len(self.valid_samples) == 0:
             raise RuntimeError('No validation samples found in ' + data_dir)
-        if len(self.test_samples) == 0:
-            raise RuntimeError('No testing samples found in ' + data_dir)
 
         self.num_train = len(self.train_samples)
         self.num_valid = len(self.valid_samples)
+
+    #---------------------------------------------------------------------------
+    def load_test_data(self, data_dir):
+        """
+        Load the test data
+        :param data_dir: the directory where the dataset's file are stored
+        """
+        test_root = data_dir + '/test/VOCdevkit/'+self.vocid
+        self.test_samples  = self.__build_sample_list(test_root, 'test    ')
+
+        if len(self.test_samples) == 0:
+            raise RuntimeError('No testing samples found in ' + data_dir)
+
         self.num_test  = len(self.test_samples)
 
 #-------------------------------------------------------------------------------
