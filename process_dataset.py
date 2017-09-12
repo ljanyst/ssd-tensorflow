@@ -144,7 +144,7 @@ def main():
     parser.add_argument('--compute-gt', type=str2bool, default='True',
                         help="Compute the ground truth matrices")
     parser.add_argument('--preset', default='vgg300',
-                        choices=['vgg300', 'vgg500'],
+                        choices=['vgg300', 'vgg512'],
                         help="The neural network preset")
     args = parser.parse_args()
 

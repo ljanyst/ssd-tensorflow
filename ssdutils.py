@@ -42,17 +42,16 @@ SSD_PRESETS = {
                                       Size( 3,  3),
                                       Size( 1,  1)],
                         num_anchors = 11639),
-    'vgg500': SSDPreset(image_size = Size(500, 500),
+    'vgg512': SSDPreset(image_size = Size(512, 512),
                         num_maps   = 6,
-                        map_sizes  = [Size(63, 63),
+                        map_sizes  = [Size(64, 64),
                                       Size(32, 32),
                                       Size(16, 16),
                                       Size( 8,  8),
                                       Size( 6,  6),
                                       Size( 4,  4)],
-                        num_anchors = 32174)
-
-    }
+                        num_anchors = 32936)
+}
 
 #-------------------------------------------------------------------------------
 # Minimum and maximum scales for default boxes
