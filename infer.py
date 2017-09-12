@@ -40,12 +40,13 @@ def sample_generator(samples, image_size, batch_size):
     for offset in range(0, len(samples), batch_size):
         files = samples[offset:offset+batch_size]
         images = []
-        names  = []
-        for image_file in files:
+        idxs   = []
+        for i in range(len(files)):
+            image_file = files[i]
             image = cv2.resize(cv2.imread(image_file), image_size)
             images.append(image.astype(np.float32))
-            names.append(image_file)
-        yield np.array(images), names
+            idxs.append(offset+i)
+        yield np.array(images), idxs
 
 #-------------------------------------------------------------------------------
 def main():
@@ -176,7 +177,7 @@ def main():
         n_sample_batches = int(math.ceil(len(files)/args.batch_size))
         description = '[i] Processing samples'
 
-        for x, names in tqdm(generator, total=n_sample_batches,
+        for x, idxs in tqdm(generator, total=n_sample_batches,
                       desc=description, unit='batches'):
             feed = {net.image_input:  x,
                     net.keep_prob:    1}
@@ -186,21 +187,23 @@ def main():
             # Annotate the samples
             #-------------------------------------------------------------------
             if args.annotate:
-                for i in range(len(names)):
+                for i in range(enc_boxes.shape[0]):
                     boxes = decode_boxes(enc_boxes[i], anchors, 0.99, lid2name)
                     boxes = suppress_overlaps(boxes)
-                    img = cv2.imread(names[i])
+                    filename = files[idxs[i]]
+                    img = cv2.imread(filename)
                     for box in boxes:
                         draw_box(img, box[1], colors[box[1].label])
-                    fn = args.output_dir+'/'+os.path.basename(names[i])
+                    fn = args.output_dir+'/'+os.path.basename(filename)
                     cv2.imwrite(fn, img)
 
                 #---------------------------------------------------------------
                 # Dump the predictions
                 #---------------------------------------------------------------
                 if args.dump_prediction:
-                    for i in range(len(names)):
-                        base_name = os.path.basename(names[i])
+                    for i in range(enc_boxes.shape[0]):
+                        filename = files[idxs[i]]
+                        base_name = os.path.basename(filename)
                         fn = args.output_dir+'/'+base_name+'.npy'
                         np.save(fn, enc_boxes[i])
 
