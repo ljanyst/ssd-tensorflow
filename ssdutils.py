@@ -201,7 +201,6 @@ def decode_boxes(pred, anchors, confidence_threshold = 0.99, lid2name = {}):
     bg_class    = num_classes-1
     box_class   = np.argmax(pred[:, :num_classes], axis=1)
     detections  = np.nonzero(box_class != bg_class)[0]
-    print(detections)
 
     #---------------------------------------------------------------------------
     # Decode coordinates of each box with confidence over a threshold
