@@ -165,3 +165,29 @@ class PrecisionSummary:
 
         for summary in summaries:
             self.writer.add_summary(summary, epoch)
+
+#-------------------------------------------------------------------------------
+class ImageSummary:
+    #---------------------------------------------------------------------------
+    def __init__(self, session, writer, sample_name, colors):
+        self.session = session
+        self.writer = writer
+        self.colors = colors
+        self.img_placeholder = tf.placeholder(tf.float32,
+                                              shape=[None, None, None, 3])
+        self.img_summary_op = tf.summary.image(sample_name+'_img',
+                                               self.img_placeholder)
+
+    #---------------------------------------------------------------------------
+    def push(self, epoch, samples):
+        imgs = np.zeros((3, 512, 512, 3))
+        for i, sample in enumerate(samples):
+            img = cv2.imread(sample[0])
+            img = cv2.resize(img, (512, 512))
+            for _, box in sample[1]:
+                draw_box(img, box, self.colors[box.label])
+            imgs[i] = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        feed = {self.img_placeholder: imgs}
+        summary = self.session.run(self.img_summary_op, feed_dict=feed)
+        self.writer.add_summary(summary, epoch)

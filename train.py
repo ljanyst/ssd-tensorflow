@@ -126,8 +126,17 @@ def main():
         validation_ap = PrecisionSummary(sess, summary_writer, 'validation',
                                          td.lname2id.keys())
 
+        training_imgs = ImageSummary(sess, summary_writer, 'training',
+                                     td.label_colors)
+        validation_imgs = ImageSummary(sess, summary_writer, 'validation',
+                                       td.label_colors)
+
+
         print('[i] Training...')
         for e in range(args.epochs):
+            training_imgs_samples = []
+            validation_imgs_samples = []
+
             #-------------------------------------------------------------------
             # Train
             #-------------------------------------------------------------------
@@ -147,6 +156,10 @@ def main():
                     boxes = decode_boxes(result[i], anchors, 0.99, td.lid2name)
                     boxes = suppress_overlaps(boxes)
                     training_ap_calc.add_detections(ids[i], boxes)
+
+                    if len(training_imgs_samples) < 3:
+                        fn = td.train_samples[ids[i]].filename
+                        training_imgs_samples.append((fn, boxes))
 
             training_loss_total /= td.num_train
 
@@ -168,6 +181,10 @@ def main():
                     boxes = decode_boxes(result[i], anchors, 0.99, td.lid2name)
                     boxes = suppress_overlaps(boxes)
                     validation_ap_calc.add_detections(ids[i], boxes)
+
+                    if len(validation_imgs_samples) < 3:
+                        fn = td.valid_samples[ids[i]].filename
+                        validation_imgs_samples.append((fn, boxes))
 
             validation_loss_total /= td.num_valid
 
@@ -196,6 +213,13 @@ def main():
 
             training_ap_calc.clear()
             validation_ap_calc.clear()
+
+            #-------------------------------------------------------------------
+            # Push the image summaries
+            #-------------------------------------------------------------------
+            if e % 5 == 0:
+                training_imgs.push(e, training_imgs_samples)
+                validation_imgs.push(e, validation_imgs_samples)
 
             #-------------------------------------------------------------------
             # Save a checktpoint
