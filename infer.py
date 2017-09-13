@@ -66,7 +66,7 @@ def main():
                         help='directory for the resulting images')
     parser.add_argument('--annotate', type=str2bool, default='False',
                         help="Annotate the data samples")
-    parser.add_argument('--dump-prediction', type=str2bool, default='False',
+    parser.add_argument('--dump-predictions', type=str2bool, default='False',
                         help="Dump raw predictions")
     parser.add_argument('--compute-stats', type=str2bool, default='True',
                         help="Compute the mAP stats")
@@ -77,6 +77,18 @@ def main():
     parser.add_argument('--batch-size', type=int, default=32,
                         help='batch size')
     args = parser.parse_args()
+
+    #---------------------------------------------------------------------------
+    # Print parameters
+    #---------------------------------------------------------------------------
+    print('[i] Project name:      ', args.name)
+    print('[i] Training data:     ', args.training_data)
+    print('[i] Batch size:        ', args.batch_size)
+    print('[i] Data source:       ', args.data_source)
+    print('[i] Data directory:    ', args.data_dir)
+    print('[i] Output directory:  ', args.output_dir)
+    print('[i] Annotate:          ', args.annotate)
+    print('[i] Dump predictions:  ', args.dump_predictions)
 
     #---------------------------------------------------------------------------
     # Check if we can get the checkpoint
@@ -124,8 +136,8 @@ def main():
         try:
             source = load_data_source(args.data_source)
             source.load_test_data(args.data_dir)
-            print('[i] # testing samples:    ', source.num_test)
-            print('[i] # classes:            ', source.num_classes)
+            print('[i] # testing samples: ', source.num_test)
+            print('[i] # classes:         ', source.num_classes)
         except (ImportError, AttributeError, RuntimeError) as e:
             print('[!] Unable to load data source:', str(e))
             return 1
@@ -157,18 +169,13 @@ def main():
             os.makedirs(args.output_dir)
 
     #---------------------------------------------------------------------------
-    # Print parameters
+    # Print model and dataset stats
     #---------------------------------------------------------------------------
-    print('[i] Project name:      ', args.name)
+    print('[i] Compute stats:     ', compute_stats)
     print('[i] Network checkpoint:', checkpoint_file)
     print('[i] Metagraph file:    ', metagraph_file)
-    print('[i] Training data:     ', args.training_data)
     print('[i] Image size:        ', image_size)
     print('[i] Number of files:   ', len(files))
-    print('[i] Batch size:        ', args.batch_size)
-    print('[i] Data source:       ', args.data_source)
-    print('[i] Data directory:    ', args.data_dir)
-    print('[i] Output directory:  ', args.output_dir)
 
     #---------------------------------------------------------------------------
     # Create the network
@@ -216,7 +223,7 @@ def main():
                 #---------------------------------------------------------------
                 # Dump the predictions
                 #---------------------------------------------------------------
-                if args.dump_prediction:
+                if args.dump_predictions:
                     raw_fn = args.output_dir+'/'+basename+'.npy'
                     np.save(raw_fn, enc_boxes[i])
 
