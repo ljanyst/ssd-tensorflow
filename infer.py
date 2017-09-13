@@ -29,6 +29,7 @@ import os
 import tensorflow as tf
 import numpy as np
 
+from average_precision import APCalculator, APs2mAP
 from ssdutils import get_anchors_for_preset, decode_boxes, suppress_overlaps
 from ssdvgg import SSDVGG
 from utils import str2bool, load_data_source, draw_box
@@ -41,8 +42,7 @@ def sample_generator(samples, image_size, batch_size):
         files = samples[offset:offset+batch_size]
         images = []
         idxs   = []
-        for i in range(len(files)):
-            image_file = files[i]
+        for i, image_file in enumerate(files):
             image = cv2.resize(cv2.imread(image_file), image_size)
             images.append(image.astype(np.float32))
             idxs.append(offset+i)
@@ -68,6 +68,8 @@ def main():
                         help="Annotate the data samples")
     parser.add_argument('--dump-prediction', type=str2bool, default='False',
                         help="Dump raw predictions")
+    parser.add_argument('--compute-stats', type=str2bool, default='True',
+                        help="Compute the mAP stats")
     parser.add_argument('--data-source', default=None,
                         help='Use test files from the data source')
     parser.add_argument('--data-dir', default='pascal-voc-2007',
@@ -105,6 +107,7 @@ def main():
         preset = data['preset']
         colors = data['colors']
         lid2name = data['lid2name']
+        num_classes = data['num-classes']
         image_size = preset.image_size
         anchors = get_anchors_for_preset(preset)
     except (FileNotFoundError, IOError, KeyError) as e:
@@ -114,6 +117,7 @@ def main():
     #---------------------------------------------------------------------------
     # Load the data source if defined
     #---------------------------------------------------------------------------
+    compute_stats = False
     source = None
     if args.data_source:
         print('[i] Configuring the data source...')
@@ -125,6 +129,9 @@ def main():
         except (ImportError, AttributeError, RuntimeError) as e:
             print('[!] Unable to load data source:', str(e))
             return 1
+
+        if args.compute_stats:
+            compute_stats = True
 
     #---------------------------------------------------------------------------
     # Create a list of files to analyse and make sure that the output directory
@@ -161,10 +168,14 @@ def main():
     print('[i] Batch size:        ', args.batch_size)
     print('[i] Data source:       ', args.data_source)
     print('[i] Data directory:    ', args.data_dir)
+    print('[i] Output directory:  ', args.output_dir)
 
     #---------------------------------------------------------------------------
     # Create the network
     #---------------------------------------------------------------------------
+    if compute_stats:
+        ap_calc = APCalculator(source.test_samples)
+
     with tf.Session() as sess:
         print('[i] Creating the model...')
         net = SSDVGG(sess)
@@ -184,28 +195,45 @@ def main():
             enc_boxes = sess.run(net.result, feed_dict=feed)
 
             #-------------------------------------------------------------------
-            # Annotate the samples
+            # Process the predictions
             #-------------------------------------------------------------------
-            if args.annotate:
-                for i in range(enc_boxes.shape[0]):
-                    boxes = decode_boxes(enc_boxes[i], anchors, 0.99, lid2name)
-                    boxes = suppress_overlaps(boxes)
-                    filename = files[idxs[i]]
+            for i in range(enc_boxes.shape[0]):
+                boxes = decode_boxes(enc_boxes[i], anchors, 0.99, lid2name)
+                boxes = suppress_overlaps(boxes)
+                filename = files[idxs[i]]
+                basename = os.path.basename(filename)
+
+                #---------------------------------------------------------------
+                # Annotate samples
+                #---------------------------------------------------------------
+                if args.annotate:
                     img = cv2.imread(filename)
                     for box in boxes:
                         draw_box(img, box[1], colors[box[1].label])
-                    fn = args.output_dir+'/'+os.path.basename(filename)
+                    fn = args.output_dir+'/'+basename
                     cv2.imwrite(fn, img)
 
                 #---------------------------------------------------------------
                 # Dump the predictions
                 #---------------------------------------------------------------
                 if args.dump_prediction:
-                    for i in range(enc_boxes.shape[0]):
-                        filename = files[idxs[i]]
-                        base_name = os.path.basename(filename)
-                        fn = args.output_dir+'/'+base_name+'.npy'
-                        np.save(fn, enc_boxes[i])
+                    raw_fn = args.output_dir+'/'+basename+'.npy'
+                    np.save(raw_fn, enc_boxes[i])
+
+                #---------------------------------------------------------------
+                # Add predictions to the stats calculator
+                #---------------------------------------------------------------
+                if compute_stats:
+                    ap_calc.add_detections(idxs[i], boxes)
+
+    #---------------------------------------------------------------------------
+    # Compute and print the stats
+    #---------------------------------------------------------------------------
+    if compute_stats:
+        aps = ap_calc.compute_aps()
+        for k, v in aps.items():
+            print('[i] AP [{0}]: {1:.3f}'.format(k, v))
+        print('[i] mAP: {0:.3f}'.format(APs2mAP(aps)))
 
     print('[i] All done.')
     return 0
