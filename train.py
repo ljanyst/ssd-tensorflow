@@ -27,7 +27,9 @@ import os
 import tensorflow as tf
 import numpy as np
 
+from average_precision import APCalculator, APs2mAP
 from training_data import TrainingData
+from ssdutils import get_anchors_for_preset, decode_boxes, suppress_overlaps
 from ssdvgg import SSDVGG
 from utils import *
 from tqdm import tqdm
@@ -104,6 +106,10 @@ def main():
         n_train_batches = int(math.ceil(td.num_train/args.batch_size))
         initialize_uninitialized_variables(sess)
 
+        anchors = get_anchors_for_preset(td.preset)
+        training_ap_calc = APCalculator(td.train_samples)
+        validation_ap_calc = APCalculator(td.valid_samples)
+
         #-----------------------------------------------------------------------
         # Summaries
         #-----------------------------------------------------------------------
@@ -114,6 +120,11 @@ def main():
         training_loss = tf.placeholder(tf.float32)
         training_loss_summary_op = tf.summary.scalar('training_loss',
                                                      training_loss)
+
+        training_ap = PrecisionSummary(sess, summary_writer, 'training',
+                                       td.lname2id.keys())
+        validation_ap = PrecisionSummary(sess, summary_writer, 'validation',
+                                         td.lname2id.keys())
 
         print('[i] Training...')
         for e in range(args.epochs):
@@ -128,8 +139,15 @@ def main():
                 feed = {net.image_input:  x,
                         labels:           y,
                         net.keep_prob:    1}
-                loss_batch, _ = sess.run([loss, optimizer], feed_dict=feed)
+                result, loss_batch, _ = sess.run([net.result, loss, optimizer],
+                                                 feed_dict=feed)
                 training_loss_total += loss_batch * x.shape[0]
+
+                for i in range(result.shape[0]):
+                    boxes = decode_boxes(result[i], anchors, 0.99, td.lid2name)
+                    boxes = suppress_overlaps(boxes)
+                    training_ap_calc.add_detections(ids[i], boxes)
+
             training_loss_total /= td.num_train
 
             #-------------------------------------------------------------------
@@ -142,8 +160,14 @@ def main():
                 feed = {net.image_input:  x,
                         labels:           y,
                         net.keep_prob:    1}
-                loss_batch = sess.run(loss, feed_dict=feed)
+                result, loss_batch = sess.run([net.result, loss],
+                                              feed_dict=feed)
                 validation_loss_total += loss_batch * x.shape[0]
+
+                for i in range(result.shape[0]):
+                    boxes = decode_boxes(result[i], anchors, 0.99, td.lid2name)
+                    boxes = suppress_overlaps(boxes)
+                    validation_ap_calc.add_detections(ids[i], boxes)
 
             validation_loss_total /= td.num_valid
 
@@ -158,6 +182,20 @@ def main():
 
             summary_writer.add_summary(loss_summary[0], e)
             summary_writer.add_summary(loss_summary[1], e)
+
+            #-------------------------------------------------------------------
+            # Compute and write the average precision
+            #-------------------------------------------------------------------
+            APs = training_ap_calc.compute_aps()
+            mAP = APs2mAP(APs)
+            training_ap.push(e, mAP, APs)
+
+            APs = validation_ap_calc.compute_aps()
+            mAP = APs2mAP(APs)
+            validation_ap.push(e, mAP, APs)
+
+            training_ap_calc.clear()
+            validation_ap_calc.clear()
 
             #-------------------------------------------------------------------
             # Save a checktpoint
