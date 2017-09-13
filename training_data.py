@@ -57,16 +57,19 @@ class TrainingData:
     #---------------------------------------------------------------------------
     def __batch_generator(self, sample_list):
         image_size = (self.preset.image_size.w, self.preset.image_size.h)
+        sample_list = list(enumerate(sample_list))
         def gen_batch(batch_size):
             random.shuffle(sample_list)
             for offset in range(0, len(sample_list), batch_size):
                 samples = sample_list[offset:offset+batch_size]
                 images = []
                 labels = []
+                sample_ids = []
 
                 for s in samples:
-                    image_file = s[0].filename
-                    label_file = s[1]
+                    sample_id  = s[0]
+                    image_file = s[1][0].filename
+                    label_file = s[1][1]
 
                     image = cv2.resize(cv2.imread(image_file), image_size)
                     label = np.load(label_file)
@@ -74,6 +77,8 @@ class TrainingData:
                     images.append(image.astype(np.float32))
                     labels.append(label)
 
-                yield np.array(images), np.array(labels)
+                    sample_ids.append(sample_id)
+
+                yield np.array(images), np.array(labels), sample_ids
 
         return gen_batch

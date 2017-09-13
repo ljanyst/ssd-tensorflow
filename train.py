@@ -123,8 +123,8 @@ def main():
             generator = td.train_generator(args.batch_size)
             description = '[i] Epoch {:>2}/{}'.format(e+1, args.epochs)
             training_loss_total = 0
-            for x, y in tqdm(generator, total=n_train_batches,
-                             desc=description, unit='batches'):
+            for x, y, ids in tqdm(generator, total=n_train_batches,
+                                  desc=description, unit='batches'):
                 feed = {net.image_input:  x,
                         labels:           y,
                         net.keep_prob:    1}
@@ -138,7 +138,7 @@ def main():
             generator = td.valid_generator(args.batch_size)
             validation_loss_total = 0
 
-            for x, y in generator:
+            for x, y, ids in generator:
                 feed = {net.image_input:  x,
                         labels:           y,
                         net.keep_prob:    1}
