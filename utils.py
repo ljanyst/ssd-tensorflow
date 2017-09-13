@@ -114,6 +114,12 @@ def normalize_box(box):
     xmax = min(xmax, img_size.w-1)
     ymin = max(ymin, 0)
     ymax = min(ymax, img_size.h-1)
+
+    # this happens early in the training when box min and max are outside
+    # of the image
+    xmin = min(xmin, xmax)
+    ymin = min(ymin, ymax)
+
     center, size = abs2prop(xmin, xmax, ymin, ymax, img_size)
     return Box(box.label, box.labelid, center, size)
 

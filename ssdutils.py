@@ -180,6 +180,8 @@ def compute_location(box, anchor):
 
 #-------------------------------------------------------------------------------
 def decode_location(box, anchor):
+    box[box > 100] = 100 # only happens early training
+
     x = box[0] * anchor.size.w + anchor.center.x
     y = box[1] * anchor.size.h + anchor.center.y
     w = exp(box[2]) * anchor.size.w
