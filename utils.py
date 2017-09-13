@@ -132,3 +132,36 @@ def draw_box(img, box, color):
     font = cv2.FONT_HERSHEY_SIMPLEX
     cv2.putText(img, box.label, (xmin+5, ymin-5), font, 0.5,
                 (255, 255, 255), 1, cv2.LINE_AA)
+
+#-------------------------------------------------------------------------------
+class PrecisionSummary:
+    #---------------------------------------------------------------------------
+    def __init__(self, session, writer, sample_name, labels):
+        self.session = session
+        self.writer = writer
+        self.labels = labels
+        self.mAP_placeholder = tf.placeholder(tf.float32)
+        self.mAP_summary_op = tf.summary.scalar(sample_name+'_mAP',
+                                                self.mAP_placeholder)
+        self.placeholders = {}
+        self.summary_ops = {}
+
+        for label in labels:
+            summary_name = sample_name+'_AP_'+label
+            placeholder = tf.placeholder(tf.float32)
+            summary_op = tf.summary.scalar(summary_name, placeholder)
+            self.placeholders[label] = placeholder
+            self.summary_ops[label] = summary_op
+
+    #---------------------------------------------------------------------------
+    def push(self, epoch, mAP, APs):
+        feed = {self.mAP_placeholder: mAP}
+        tensors = [self.mAP_summary_op]
+        for label in self.labels:
+            feed[self.placeholders[label]] = APs[label]
+            tensors.append(self.summary_ops[label])
+
+        summaries = self.session.run(tensors, feed_dict=feed)
+
+        for summary in summaries:
+            self.writer.add_summary(summary, epoch)
