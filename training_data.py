@@ -53,6 +53,8 @@ class TrainingData:
         self.valid_generator = self.__batch_generator(valid_samples)
         self.num_train       = len(train_samples)
         self.num_valid       = len(valid_samples)
+        self.train_samples   = list(map(lambda x: x[0], train_samples))
+        self.valid_samples   = list(map(lambda x: x[0], valid_samples))
 
     #---------------------------------------------------------------------------
     def __batch_generator(self, sample_list):
