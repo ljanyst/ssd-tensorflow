@@ -29,36 +29,37 @@ from math import sqrt, log, exp
 # It's done so that we don't have to build the whole network in memory in order
 # to pre-process the datasets.
 #-------------------------------------------------------------------------------
-SSDPreset = namedtuple('SSDPreset', ['image_size', 'num_maps', 'map_sizes',
-                                     'num_anchors'])
+SSDPreset = namedtuple('SSDPreset', ['name', 'image_size', 'num_maps',
+                                     'map_sizes', 'num_anchors', 'scale_min',
+                                     'scale_max'])
 
 SSD_PRESETS = {
-    'vgg300': SSDPreset(image_size = Size(300, 300),
-                        num_maps   = 6,
-                        map_sizes  = [Size(38, 38),
-                                      Size(19, 19),
-                                      Size(10, 10),
-                                      Size( 5,  5),
-                                      Size( 3,  3),
-                                      Size( 1,  1)],
-                        num_anchors = 11639),
-    'vgg512': SSDPreset(image_size = Size(512, 512),
-                        num_maps   = 6,
-                        map_sizes  = [Size(64, 64),
-                                      Size(32, 32),
-                                      Size(16, 16),
-                                      Size( 8,  8),
-                                      Size( 6,  6),
-                                      Size( 4,  4)],
-                        num_anchors = 32936)
+    'vgg300': SSDPreset(name        = 'vgg300',
+                        image_size  = Size(300, 300),
+                        num_maps    = 6,
+                        map_sizes   = [Size(38, 38),
+                                       Size(19, 19),
+                                       Size(10, 10),
+                                       Size( 5,  5),
+                                       Size( 3,  3),
+                                       Size( 1,  1)],
+                        num_anchors = 11639,
+                        scale_min   = 0.1,
+                        scale_max   = 0.9),
+    'vgg512': SSDPreset(name        = 'vgg512',
+                        image_size = Size(512, 512),
+                        num_maps    = 7,
+                        map_sizes   = [Size(64, 64),
+                                       Size(32, 32),
+                                       Size(16, 16),
+                                       Size( 8,  8),
+                                       Size( 6,  6),
+                                       Size( 4,  4),
+                                       Size( 2,  2)],
+                        num_anchors = 32972,
+                        scale_min   = 0.07,
+                        scale_max   = 0.9),
 }
-
-#-------------------------------------------------------------------------------
-# Minimum and maximum scales for default boxes
-#-------------------------------------------------------------------------------
-SCALE_MIN  = 0.2
-SCALE_MAX  = 0.9
-SCALE_DIFF = SCALE_MAX - SCALE_MIN
 
 #-------------------------------------------------------------------------------
 # Default box parameters both in terms proportional to image dimensions
@@ -80,8 +81,9 @@ def get_anchors_for_preset(preset):
     # Compute scales for each feature map
     #---------------------------------------------------------------------------
     scales = []
+    scale_diff = preset.scale_max - preset.scale_min
     for k in range(1, preset.num_maps+1):
-        scale = SCALE_MIN + SCALE_DIFF/(preset.num_maps-1)*(k-1)
+        scale = preset.scale_min + scale_diff/(preset.num_maps-1)*(k-1)
         scales.append(scale)
 
     #---------------------------------------------------------------------------
