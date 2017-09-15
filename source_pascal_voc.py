@@ -57,9 +57,9 @@ label_defs = [
     Label('tvmonitor',   rgb2bgr((119,  11,  32)))]
 
 #-------------------------------------------------------------------------------
-class PascalVOC2007Source:
+class PascalVOCSource:
     #---------------------------------------------------------------------------
-    def __init__(self, vocid='VOC2007'):
+    def __init__(self, vocids=['VOC2007', 'VOC2012']):
         self.num_classes   = len(label_defs)
         self.colors        = {l.name: l.color for l in label_defs}
         self.lid2name      = {i: l.name for i, l in enumerate(label_defs)}
@@ -70,7 +70,7 @@ class PascalVOC2007Source:
         self.train_samples = []
         self.valid_samples = []
         self.test_samples  = []
-        self.vocid         = vocid
+        self.vocids        = vocids
 
     #---------------------------------------------------------------------------
     def __build_sample_list(self, root, dataset_name):
@@ -141,9 +141,13 @@ class PascalVOC2007Source:
         :param valid_fraction: what franction of the dataset should be used
                                as a validation sample
         """
-        trainval_root = data_dir + '/trainval/VOCdevkit/'+self.vocid
 
-        trainval_samples   = self.__build_sample_list(trainval_root, 'trainval')
+        trainval_samples = []
+        for vocid in self.vocids:
+            trainval_root = data_dir + '/trainval/VOCdevkit/'+vocid
+            trainval_name = 'trainval_'+vocid
+            trainval_samples += self.__build_sample_list(trainval_root,
+                                                         trainval_name)
         random.shuffle(trainval_samples)
         tvlen              = len(trainval_samples)
         self.valid_samples = trainval_samples[:int(valid_fraction*tvlen)]
@@ -163,8 +167,8 @@ class PascalVOC2007Source:
         Load the test data
         :param data_dir: the directory where the dataset's file are stored
         """
-        test_root = data_dir + '/test/VOCdevkit/'+self.vocid
-        self.test_samples  = self.__build_sample_list(test_root, 'test    ')
+        test_root = data_dir + '/test/VOCdevkit/VOC2007'
+        self.test_samples  = self.__build_sample_list(test_root, 'test')
 
         if len(self.test_samples) == 0:
             raise RuntimeError('No testing samples found in ' + data_dir)
@@ -173,4 +177,4 @@ class PascalVOC2007Source:
 
 #-------------------------------------------------------------------------------
 def get_source():
-    return PascalVOC2007Source()
+    return PascalVOCSource()

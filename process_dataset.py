@@ -135,9 +135,9 @@ def main():
     # Parse the commandline
     #---------------------------------------------------------------------------
     parser = argparse.ArgumentParser(description='Train the SSD')
-    parser.add_argument('--data-source', default='pascal_voc_2007',
+    parser.add_argument('--data-source', default='pascal_voc',
                         help='data source')
-    parser.add_argument('--data-dir', default='pascal-voc-2007',
+    parser.add_argument('--data-dir', default='pascal-voc',
                         help='data directory')
     parser.add_argument('--annotate', type=str2bool, default='False',
                         help="Annotate the data samples")
