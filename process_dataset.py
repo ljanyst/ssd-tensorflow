@@ -160,7 +160,7 @@ def main():
     print('[i] Configuring the data source...')
     try:
         source = load_data_source(args.data_source)
-        source.load_trainval_data(args.data_dir, 0.1)
+        source.load_trainval_data(args.data_dir, 0.05)
         source.load_test_data(args.data_dir)
         print('[i] # training samples:   ', source.num_train)
         print('[i] # validation samples: ', source.num_valid)
