@@ -152,7 +152,7 @@ def main():
                 training_loss_total += loss_batch * x.shape[0]
 
                 for i in range(result.shape[0]):
-                    boxes = decode_boxes(result[i], anchors, 0.99, td.lid2name)
+                    boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
                     boxes = suppress_overlaps(boxes)
                     training_ap_calc.add_detections(ids[i], boxes)
 
@@ -177,7 +177,7 @@ def main():
                 validation_loss_total += loss_batch * x.shape[0]
 
                 for i in range(result.shape[0]):
-                    boxes = decode_boxes(result[i], anchors, 0.99, td.lid2name)
+                    boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
                     boxes = suppress_overlaps(boxes)
                     validation_ap_calc.add_detections(ids[i], boxes)
 

@@ -205,7 +205,7 @@ def main():
             # Process the predictions
             #-------------------------------------------------------------------
             for i in range(enc_boxes.shape[0]):
-                boxes = decode_boxes(enc_boxes[i], anchors, 0.99, lid2name)
+                boxes = decode_boxes(enc_boxes[i], anchors, 0.01, lid2name)
                 boxes = suppress_overlaps(boxes)
                 filename = files[idxs[i]]
                 basename = os.path.basename(filename)
