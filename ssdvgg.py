@@ -256,6 +256,12 @@ class SSDVGG:
         self.ssd_conv11_1 = conv_map(self.ssd_conv10_2, 128, 1, 1, 'conv11_1')
         self.ssd_conv11_2 = conv_map(self.ssd_conv11_1, 256, 3, 1, 'conv11_2', 'VALID')
 
+        if self.preset.num_maps < 7:
+            return
+
+        self.ssd_conv12_1 = conv_map(self.ssd_conv11_2, 128, 1, 1, 'conv12_1')
+        self.ssd_conv12_2 = conv_map(self.ssd_conv12_1, 256, 3, 1, 'conv12_2', 'VALID')
+
     #---------------------------------------------------------------------------
     def __select_feature_maps(self):
         self.__maps = [
@@ -265,6 +271,9 @@ class SSDVGG:
             self.ssd_conv9_2,
             self.ssd_conv10_2,
             self.ssd_conv11_2]
+
+        if self.preset.num_maps == 7:
+            self.__maps.append(self.ssd_conv12_2)
 
     #---------------------------------------------------------------------------
     def __build_classifiers(self):
