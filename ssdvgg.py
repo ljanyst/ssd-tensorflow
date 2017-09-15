@@ -23,6 +23,7 @@ import shutil
 import os
 
 import tensorflow as tf
+import numpy as np
 
 from urllib.request import urlretrieve
 from tqdm import tqdm
@@ -68,6 +69,12 @@ def smooth_l1_loss(x):
     return tf.where(tf.less(absolute_loss, 1.), square_loss, absolute_loss-0.5)
 
 #-------------------------------------------------------------------------------
+def array2tensor(x, name):
+    init = tf.constant_initializer(value=x, dtype=tf.float32)
+    tensor = tf.get_variable(name=name, initializer=init, shape=x.shape)
+    return tensor
+
+#-------------------------------------------------------------------------------
 class SSDVGG:
     #---------------------------------------------------------------------------
     def __init__(self, session):
@@ -75,7 +82,8 @@ class SSDVGG:
         self.__built = False
 
     #---------------------------------------------------------------------------
-    def build_from_vgg(self, vgg_dir, num_classes, preset, progress_hook):
+    def build_from_vgg(self, vgg_dir, num_classes, preset, a_trous=True,
+                       progress_hook='tqdm'):
         """
         Build the model for training based on a pre-define vgg16 model.
         :param vgg_dir:       directory where the vgg model should be stored
@@ -89,7 +97,8 @@ class SSDVGG:
         self.preset      = preset
         self.__download_vgg(vgg_dir, progress_hook)
         self.__load_vgg(vgg_dir)
-        self.__build_vgg_mods()
+        if a_trous: self.__build_vgg_mods_a_trous()
+        else: self.__build_vgg_mods()
         self.__build_ssd_layers()
         self.__select_feature_maps()
         self.__build_classifiers()
@@ -174,6 +183,66 @@ class SSDVGG:
             x = tf.nn.conv2d(self.mod_conv6, self.vgg_fc7_w,
                              strides=[1, 1, 1, 1], padding='SAME')
             x = tf.nn.bias_add(x, self.vgg_fc7_b)
+            self.mod_conv7 = tf.nn.relu(x)
+
+    #---------------------------------------------------------------------------
+    def __build_vgg_mods_a_trous(self):
+        sess = self.session
+
+        self.mod_pool5 = tf.nn.max_pool(self.vgg_conv5_3, ksize=[1, 3, 3, 1],
+                                        strides=[1, 1, 1, 1], padding='SAME',
+                                        name='mod_pool5')
+
+        #-----------------------------------------------------------------------
+        # Modified conv6
+        #-----------------------------------------------------------------------
+        with tf.variable_scope('mod_conv6'):
+            #-------------------------------------------------------------------
+            # Decimate the weights
+            #-------------------------------------------------------------------
+            orig_w, orig_b = sess.run([self.vgg_fc6_w, self.vgg_fc6_b])
+            mod_w = np.zeros((3, 3, 512, 1024))
+            mod_b = np.zeros(1024)
+
+            for i in range(1024):
+                mod_b[i] = orig_b[4*i]
+                for h in range(3):
+                    for w in range(3):
+                        mod_w[h, w, :, i] = orig_w[3*h, 3*w, :, 4*i]
+
+            #-------------------------------------------------------------------
+            # Build the feature map
+            #-------------------------------------------------------------------
+            w = array2tensor(mod_w, 'weights')
+            b = array2tensor(mod_b, 'biases')
+            x = tf.nn.atrous_conv2d(self.mod_pool5, w, rate=3, padding='SAME')
+            x = tf.nn.bias_add(x, b)
+            self.mod_conv6 = tf.nn.relu(x)
+
+        #-----------------------------------------------------------------------
+        # Modified conv7
+        #-----------------------------------------------------------------------
+        with tf.variable_scope('mod_conv7'):
+            #-------------------------------------------------------------------
+            # Decimate the weights
+            #-------------------------------------------------------------------
+            orig_w, orig_b = sess.run([self.vgg_fc7_w, self.vgg_fc7_b])
+            mod_w = np.zeros((1, 1, 1024, 1024))
+            mod_b = np.zeros(1024)
+
+            for i in range(1024):
+                mod_b[i] = orig_b[4*i]
+                for j in range(1024):
+                    mod_w[:, :, j, i] = orig_w[:, :, 4*j, 4*i]
+
+            #-------------------------------------------------------------------
+            # Build the feature map
+            #-------------------------------------------------------------------
+            w = array2tensor(mod_w, 'weights')
+            b = array2tensor(mod_b, 'biases')
+            x = tf.nn.conv2d(self.mod_conv6, w, strides=[1, 1, 1, 1],
+                             padding='SAME')
+            x = tf.nn.bias_add(x, b)
             self.mod_conv7 = tf.nn.relu(x)
 
     #---------------------------------------------------------------------------
