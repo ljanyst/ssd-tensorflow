@@ -51,42 +51,25 @@ class APCalculator:
     Reference: http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCdevkit_08-Jun-2007.tar
     """
     #---------------------------------------------------------------------------
-    def __init__(self, ground_truth, minoverlap=0.5):
+    def __init__(self, minoverlap=0.5):
         """
         Initialize the calculator.
-        :param ground_truth: a list of Sample objects representing the ground
-                             truth
         """
         self.minoverlap = minoverlap
-        self.counts = defaultdict(lambda: 0)
-        self.gt = defaultdict(dict)
-
-        for sample_id, sample in enumerate(ground_truth):
-            boxes_by_class = defaultdict(list)
-            for box in sample.boxes:
-                self.counts[box.label] += 1
-                boxes_by_class[box.label].append(box)
-
-            for k, v in boxes_by_class.items():
-                arr = np.zeros((len(v), 4))
-                match = np.zeros((len(v)), dtype=np.bool)
-                for i, box in enumerate(v):
-                    arr[i] = np.array(prop2abs(box.center, box.size, IMG_SIZE))
-                self.gt[k][sample_id] = (arr, match)
-
         self.clear()
 
     #---------------------------------------------------------------------------
-    def add_detections(self, sample_id, boxes):
+    def add_detections(self, gt_sample, boxes):
         """
         Add new detections to the calculator.
-        :param sample_id: index of the sample that the detections come from,
-                          it must match the sample index in the ground truth
-                          list passed to the constructor
+        :param gt_sample: ground truth sample
         :param boxes:     a list of (float, Box) tuples representing
                           detections and their confidences, the detections
                           must have a correctly set label
         """
+
+        sample_id = len(self.gt_samples)
+        self.gt_samples.append(gt_sample)
 
         for conf, box in boxes:
             arr = np.array(prop2abs(box.center, box.size, IMG_SIZE))
@@ -99,8 +82,31 @@ class APCalculator:
         """
         Compute the average precision per class as well as mAP.
         """
+
+        #-----------------------------------------------------------------------
+        # Split the ground truth samples by class and sample
+        #-----------------------------------------------------------------------
+        counts = defaultdict(lambda: 0)
+        gt_map = defaultdict(dict)
+
+        for sample_id, sample in enumerate(self.gt_samples):
+            boxes_by_class = defaultdict(list)
+            for box in sample.boxes:
+                counts[box.label] += 1
+                boxes_by_class[box.label].append(box)
+
+            for k, v in boxes_by_class.items():
+                arr = np.zeros((len(v), 4))
+                match = np.zeros((len(v)), dtype=np.bool)
+                for i, box in enumerate(v):
+                    arr[i] = np.array(prop2abs(box.center, box.size, IMG_SIZE))
+                gt_map[k][sample_id] = (arr, match)
+
+        #-----------------------------------------------------------------------
+        # Compare predictions to ground truth
+        #-----------------------------------------------------------------------
         aps = {}
-        for k in self.gt:
+        for k in gt_map:
             #-------------------------------------------------------------------
             # Create numpy arrays of detection parameters and sort them
             # in descending order
@@ -126,15 +132,15 @@ class APCalculator:
                 # The image this detection comes from contains no objects of
                 # of this class
                 #---------------------------------------------------------------
-                if not sample_id in self.gt[k]:
+                if not sample_id in gt_map[k]:
                     fps[i] = 1
                     continue
 
                 #---------------------------------------------------------------
                 # Compute the jaccard overlap and see if it's over the threshold
                 #---------------------------------------------------------------
-                gt = self.gt[k][sample_id][0]
-                matched = self.gt[k][sample_id][1]
+                gt = gt_map[k][sample_id][0]
+                matched = gt_map[k][sample_id][1]
 
                 iou = jaccard_overlap(box, gt)
                 max_idx = np.argmax(iou)
@@ -158,7 +164,7 @@ class APCalculator:
             #-------------------------------------------------------------------
             fps = np.cumsum(fps)
             tps = np.cumsum(tps)
-            recall = tps/self.counts[k]
+            recall = tps/counts[k]
             prec = tps/(tps+fps)
             ap = 0
             for r_tilde in np.arange(0, 1.1, 0.1):
@@ -180,6 +186,4 @@ class APCalculator:
         self.det_params = defaultdict(list)
         self.det_confidence = defaultdict(list)
         self.det_sample_ids = defaultdict(list)
-        for k, v in self.gt.items():
-            for idx, gt_data in v.items():
-                gt_data[1][:] = False
+        self.gt_samples = []
