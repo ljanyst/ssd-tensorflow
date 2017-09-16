@@ -139,6 +139,8 @@ def main():
                         help='data source')
     parser.add_argument('--data-dir', default='pascal-voc',
                         help='data directory')
+    parser.add_argument('--validation-fraction', type=float, default=0.025,
+                        help='fraction of the data to be used for validation')
     parser.add_argument('--annotate', type=str2bool, default='False',
                         help="Annotate the data samples")
     parser.add_argument('--compute-gt', type=str2bool, default='True',
@@ -150,6 +152,7 @@ def main():
 
     print('[i] Data source:          ', args.data_source)
     print('[i] Data directory:       ', args.data_dir)
+    print('[i] Validation fraction:  ', args.validation_fraction)
     print('[i] Annotate:             ', args.annotate)
     print('[i] Compute ground truth: ', args.compute_gt)
     print('[i] Preset:               ', args.preset)
@@ -160,7 +163,7 @@ def main():
     print('[i] Configuring the data source...')
     try:
         source = load_data_source(args.data_source)
-        source.load_trainval_data(args.data_dir, 0.05)
+        source.load_trainval_data(args.data_dir, args.validation_fraction)
         source.load_test_data(args.data_dir)
         print('[i] # training samples:   ', source.num_train)
         print('[i] # validation samples: ', source.num_valid)
