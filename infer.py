@@ -60,7 +60,7 @@ def main():
     parser.add_argument('--checkpoint', type=int, default=-1,
                         help='checkpoint to restore; -1 is the most recent')
     parser.add_argument('--training-data',
-                        default='pascal-voc-2007/training-data.pkl',
+                        default='pascal-voc/training-data.pkl',
                         help='Information about parameters used for training')
     parser.add_argument('--output-dir', default='test-output',
                         help='directory for the resulting images')
@@ -72,7 +72,7 @@ def main():
                         help="Compute the mAP stats")
     parser.add_argument('--data-source', default=None,
                         help='Use test files from the data source')
-    parser.add_argument('--data-dir', default='pascal-voc-2007',
+    parser.add_argument('--data-dir', default='pascal-voc',
                         help='Use test files from the data source')
     parser.add_argument('--batch-size', type=int, default=32,
                         help='batch size')
