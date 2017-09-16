@@ -42,7 +42,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train the SSD')
     parser.add_argument('--name', default='test',
                         help='project name')
-    parser.add_argument('--data-dir', default='pascal-voc-2007',
+    parser.add_argument('--data-dir', default='pascal-voc',
                         help='data directory')
     parser.add_argument('--vgg-dir', default='vgg_graph',
                         help='directory for the VGG-16 model')
@@ -106,8 +106,8 @@ def main():
         initialize_uninitialized_variables(sess)
 
         anchors = get_anchors_for_preset(td.preset)
-        training_ap_calc = APCalculator(td.train_samples)
-        validation_ap_calc = APCalculator(td.valid_samples)
+        training_ap_calc = APCalculator()
+        validation_ap_calc = APCalculator()
 
         #-----------------------------------------------------------------------
         # Summaries
@@ -154,10 +154,11 @@ def main():
                 for i in range(result.shape[0]):
                     boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
                     boxes = suppress_overlaps(boxes)
-                    training_ap_calc.add_detections(ids[i], boxes)
+                    gt_sample = td.train_samples[ids[i]]
+                    training_ap_calc.add_detections(gt_sample, boxes)
 
                     if len(training_imgs_samples) < 3:
-                        fn = td.train_samples[ids[i]].filename
+                        fn = gt_sample.filename
                         training_imgs_samples.append((fn, boxes))
 
             training_loss_total /= td.num_train
@@ -179,10 +180,11 @@ def main():
                 for i in range(result.shape[0]):
                     boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
                     boxes = suppress_overlaps(boxes)
-                    validation_ap_calc.add_detections(ids[i], boxes)
+                    gt_sample = td.valid_samples[ids[i]]
+                    validation_ap_calc.add_detections(gt_sample, boxes)
 
                     if len(validation_imgs_samples) < 3:
-                        fn = td.valid_samples[ids[i]].filename
+                        fn = gt_sample.filename
                         validation_imgs_samples.append((fn, boxes))
 
             validation_loss_total /= td.num_valid
