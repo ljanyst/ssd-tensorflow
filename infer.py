@@ -181,7 +181,7 @@ def main():
     # Create the network
     #---------------------------------------------------------------------------
     if compute_stats:
-        ap_calc = APCalculator(source.test_samples)
+        ap_calc = APCalculator()
 
     with tf.Session() as sess:
         print('[i] Creating the model...')
@@ -231,7 +231,7 @@ def main():
                 # Add predictions to the stats calculator
                 #---------------------------------------------------------------
                 if compute_stats:
-                    ap_calc.add_detections(idxs[i], boxes)
+                    ap_calc.add_detections(source.test_samples[idxs[i]], boxes)
 
     #---------------------------------------------------------------------------
     # Compute and print the stats
