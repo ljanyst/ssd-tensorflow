@@ -59,7 +59,7 @@ class APCalculator:
         self.clear()
 
     #---------------------------------------------------------------------------
-    def add_detections(self, gt_sample, boxes):
+    def add_detections(self, gt_boxes, boxes):
         """
         Add new detections to the calculator.
         :param gt_sample: ground truth sample
@@ -68,8 +68,8 @@ class APCalculator:
                           must have a correctly set label
         """
 
-        sample_id = len(self.gt_samples)
-        self.gt_samples.append(gt_sample)
+        sample_id = len(self.gt_boxes)
+        self.gt_boxes.append(gt_boxes)
 
         for conf, box in boxes:
             arr = np.array(prop2abs(box.center, box.size, IMG_SIZE))
@@ -89,9 +89,9 @@ class APCalculator:
         counts = defaultdict(lambda: 0)
         gt_map = defaultdict(dict)
 
-        for sample_id, sample in enumerate(self.gt_samples):
+        for sample_id, boxes in enumerate(self.gt_boxes):
             boxes_by_class = defaultdict(list)
-            for box in sample.boxes:
+            for box in boxes:
                 counts[box.label] += 1
                 boxes_by_class[box.label].append(box)
 
@@ -186,4 +186,4 @@ class APCalculator:
         self.det_params = defaultdict(list)
         self.det_confidence = defaultdict(list)
         self.det_sample_ids = defaultdict(list)
-        self.gt_samples = []
+        self.gt_boxes = []
