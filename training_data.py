@@ -24,6 +24,8 @@ import cv2
 
 import numpy as np
 
+from copy import copy
+
 #-------------------------------------------------------------------------------
 class TrainingData:
     #---------------------------------------------------------------------------
@@ -57,11 +59,20 @@ class TrainingData:
         self.valid_samples   = list(map(lambda x: x[0], valid_samples))
 
     #---------------------------------------------------------------------------
-    def __batch_generator(self, sample_list):
+    def __batch_generator(self, sample_list_):
         image_size = (self.preset.image_size.w, self.preset.image_size.h)
-        sample_list = list(enumerate(sample_list))
-        def gen_batch(batch_size):
+
+        def gen_batch(batch_size, num_batches):
+            sample_list = list(enumerate(sample_list_))
+            num_samples = batch_size * num_batches
+
+            if num_batches > 0:
+                while len(sample_list) < num_samples:
+                    sample_list += sample_list
+                sample_list = sample_list[:num_samples]
+
             random.shuffle(sample_list)
+
             for offset in range(0, len(sample_list), batch_size):
                 samples = sample_list[offset:offset+batch_size]
                 images = []

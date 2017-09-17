@@ -50,6 +50,8 @@ def main():
                         help='number of training epochs')
     parser.add_argument('--batch-size', type=int, default=32,
                         help='batch size')
+    parser.add_argument('--batches-per-epoch', type=int, default=1000,
+                        help='number of batches to process in each epoch')
     parser.add_argument('--tensorboard-dir', default="tb",
                         help='name of the tensorboard data directory')
     parser.add_argument('--checkpoint-interval', type=int, default=50,
@@ -61,6 +63,7 @@ def main():
     print('[i] VGG directory:        ', args.vgg_dir)
     print('[i] # epochs:             ', args.epochs)
     print('[i] Batch size:           ', args.batch_size)
+    print('[i] Batches per epoch:    ', args.batches_per_epoch)
     print('[i] Tensorboard directory:', args.tensorboard_dir)
     print('[i] Checkpoint interval:  ', args.checkpoint_interval)
 
@@ -102,7 +105,6 @@ def main():
                                                 sess.graph)
         saver           = tf.train.Saver(max_to_keep=10)
 
-        n_train_batches = int(math.ceil(td.num_train/args.batch_size))
         initialize_uninitialized_variables(sess)
 
         anchors = get_anchors_for_preset(td.preset)
@@ -139,10 +141,11 @@ def main():
             #-------------------------------------------------------------------
             # Train
             #-------------------------------------------------------------------
-            generator = td.train_generator(args.batch_size)
+            generator = td.train_generator(args.batch_size,
+                                           args.batches_per_epoch)
             description = '[i] Epoch {:>2}/{}'.format(e+1, args.epochs)
             training_loss_total = 0
-            for x, y, ids in tqdm(generator, total=n_train_batches,
+            for x, y, ids in tqdm(generator, total=args.batches_per_epoch,
                                   desc=description, unit='batches'):
                 feed = {net.image_input:  x,
                         labels:           y,
@@ -165,7 +168,7 @@ def main():
             #-------------------------------------------------------------------
             # Validate
             #-------------------------------------------------------------------
-            generator = td.valid_generator(args.batch_size)
+            generator = td.valid_generator(args.batch_size, 0)
             validation_loss_total = 0
 
             for x, y, ids in generator:
