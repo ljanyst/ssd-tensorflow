@@ -182,8 +182,7 @@ class ImageSummary:
     def push(self, epoch, samples):
         imgs = np.zeros((3, 512, 512, 3))
         for i, sample in enumerate(samples):
-            img = cv2.imread(sample[0])
-            img = cv2.resize(img, (512, 512))
+            img = cv2.resize(sample[0], (512, 512))
             for _, box in sample[1]:
                 draw_box(img, box, self.colors[box.label])
             imgs[i] = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

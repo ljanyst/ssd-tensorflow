@@ -158,8 +158,7 @@ def main():
                     training_ap_calc.add_detections(gt_sample, boxes)
 
                     if len(training_imgs_samples) < 3:
-                        fn = gt_sample.filename
-                        training_imgs_samples.append((fn, boxes))
+                        training_imgs_samples.append((np.copy(x[i]), boxes))
 
             training_loss_total /= td.num_train
 
@@ -184,8 +183,7 @@ def main():
                     validation_ap_calc.add_detections(gt_sample, boxes)
 
                     if len(validation_imgs_samples) < 3:
-                        fn = gt_sample.filename
-                        validation_imgs_samples.append((fn, boxes))
+                        validation_imgs_samples.append((np.copy(x[i]), boxes))
 
             validation_loss_total /= td.num_valid
 
