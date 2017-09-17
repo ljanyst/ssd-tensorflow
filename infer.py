@@ -231,7 +231,8 @@ def main():
                 # Add predictions to the stats calculator
                 #---------------------------------------------------------------
                 if compute_stats:
-                    ap_calc.add_detections(source.test_samples[idxs[i]], boxes)
+                    ap_calc.add_detections(source.test_samples[idxs[i]].boxes,
+                                           boxes)
 
     #---------------------------------------------------------------------------
     # Compute and print the stats
