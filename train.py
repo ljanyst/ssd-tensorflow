@@ -145,8 +145,8 @@ def main():
                                            args.batches_per_epoch)
             description = '[i] Epoch {:>2}/{}'.format(e+1, args.epochs)
             training_loss_total = 0
-            for x, y, ids in tqdm(generator, total=args.batches_per_epoch,
-                                  desc=description, unit='batches'):
+            for x, y, gt_boxes in tqdm(generator, total=args.batches_per_epoch,
+                                       desc=description, unit='batches'):
                 feed = {net.image_input:  x,
                         labels:           y,
                         net.keep_prob:    1}
@@ -157,8 +157,7 @@ def main():
                 for i in range(result.shape[0]):
                     boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
                     boxes = suppress_overlaps(boxes)
-                    gt_sample = td.train_samples[ids[i]]
-                    training_ap_calc.add_detections(gt_sample, boxes)
+                    training_ap_calc.add_detections(gt_boxes[i], boxes)
 
                     if len(training_imgs_samples) < 3:
                         training_imgs_samples.append((np.copy(x[i]), boxes))
@@ -171,7 +170,7 @@ def main():
             generator = td.valid_generator(args.batch_size, 0)
             validation_loss_total = 0
 
-            for x, y, ids in generator:
+            for x, y, gt_boxes in generator:
                 feed = {net.image_input:  x,
                         labels:           y,
                         net.keep_prob:    1}
@@ -182,8 +181,7 @@ def main():
                 for i in range(result.shape[0]):
                     boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
                     boxes = suppress_overlaps(boxes)
-                    gt_sample = td.valid_samples[ids[i]]
-                    validation_ap_calc.add_detections(gt_sample, boxes)
+                    validation_ap_calc.add_detections(gt_boxes[i], boxes)
 
                     if len(validation_imgs_samples) < 3:
                         validation_imgs_samples.append((np.copy(x[i]), boxes))

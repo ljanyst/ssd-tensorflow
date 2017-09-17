@@ -77,21 +77,20 @@ class TrainingData:
                 samples = sample_list[offset:offset+batch_size]
                 images = []
                 labels = []
-                sample_ids = []
+                gt_boxes = []
 
                 for s in samples:
-                    sample_id  = s[0]
                     image_file = s[1][0].filename
                     label_file = s[1][1]
+                    boxes = s[1][0].boxes
 
                     image = cv2.resize(cv2.imread(image_file), image_size)
                     label = np.load(label_file)
 
                     images.append(image.astype(np.float32))
                     labels.append(label)
+                    gt_boxes.append(boxes)
 
-                    sample_ids.append(sample_id)
-
-                yield np.array(images), np.array(labels), sample_ids
+                yield np.array(images), np.array(labels), gt_boxes
 
         return gen_batch
