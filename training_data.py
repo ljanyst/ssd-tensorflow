@@ -48,6 +48,11 @@ class TrainingData:
         except (FileNotFoundError, IOError) as e:
             raise RuntimeError(str(e))
 
+        nones = [None] * len(train_samples)
+        train_samples = list(zip(nones, nones, train_samples))
+        nones = [None] * len(valid_samples)
+        valid_samples = list(zip(nones, nones, valid_samples))
+
         #-----------------------------------------------------------------------
         # Set the attributes up
         #-----------------------------------------------------------------------
@@ -56,16 +61,27 @@ class TrainingData:
         self.label_colors    = data['colors']
         self.lid2name        = data['lid2name']
         self.lname2id        = data['lname2id']
-        self.train_generator = self.__batch_generator(train_samples)
-        self.valid_generator = self.__batch_generator(valid_samples)
+        self.train_tfs       = data['train-transforms']
+        self.valid_tfs       = data['valid-transforms']
+        self.train_generator = self.__batch_generator(train_samples,
+                                                      self.train_tfs)
+        self.valid_generator = self.__batch_generator(valid_samples,
+                                                      self.valid_tfs)
         self.num_train       = len(train_samples)
         self.num_valid       = len(valid_samples)
-        self.train_samples   = list(map(lambda x: x[0], train_samples))
-        self.valid_samples   = list(map(lambda x: x[0], valid_samples))
+        self.train_samples   = list(map(lambda x: x[2], train_samples))
+        self.valid_samples   = list(map(lambda x: x[2], valid_samples))
 
     #---------------------------------------------------------------------------
-    def __batch_generator(self, sample_list_):
+    def __batch_generator(self, sample_list_, transforms):
         image_size = (self.preset.image_size.w, self.preset.image_size.h)
+
+        #-----------------------------------------------------------------------
+        def run_transforms(sample):
+            args = sample
+            for t in transforms:
+                args = t.transform(*args)
+            return args
 
         #-----------------------------------------------------------------------
         def process_samples(samples):
@@ -73,16 +89,11 @@ class TrainingData:
             labels = []
             gt_boxes = []
             for s in samples:
-                image_file = s[0].filename
-                label_file = s[1]
-                boxes = s[0].boxes
-
-                image = cv2.resize(cv2.imread(image_file), image_size)
-                label = np.load(label_file)
+                image, label, gt = run_transforms(s)
 
                 images.append(image.astype(np.float32))
-                labels.append(label)
-                gt_boxes.append(boxes)
+                labels.append(label.astype(np.float32))
+                gt_boxes.append(gt.boxes)
 
             images = np.array(images, dtype=np.float32)
             labels = np.array(labels, dtype=np.float32)
