@@ -24,6 +24,7 @@ import math
 import sys
 import os
 
+import multiprocessing as mp
 import tensorflow as tf
 import numpy as np
 
@@ -54,6 +55,9 @@ def main():
                         help='name of the tensorboard data directory')
     parser.add_argument('--checkpoint-interval', type=int, default=50,
                         help='checkpoint interval')
+    parser.add_argument('--num-workers', type=int, default=mp.cpu_count(),
+                        help='number of parallel generators')
+
     args = parser.parse_args()
 
     print('[i] Project name:         ', args.name)
@@ -63,6 +67,7 @@ def main():
     print('[i] Batch size:           ', args.batch_size)
     print('[i] Tensorboard directory:', args.tensorboard_dir)
     print('[i] Checkpoint interval:  ', args.checkpoint_interval)
+    print('[i] Number of workers:    ', args.num_workers)
 
     try:
         print('[i] Creating directory {}...'.format(args.name))
@@ -138,7 +143,7 @@ def main():
             #-------------------------------------------------------------------
             # Train
             #-------------------------------------------------------------------
-            generator = td.train_generator(args.batch_size)
+            generator = td.train_generator(args.batch_size, args.num_workers)
             description = '[i] Epoch {:>2}/{}'.format(e+1, args.epochs)
             training_loss_total = 0
             for x, y, gt_boxes in tqdm(generator, total=n_train_batches,
@@ -163,7 +168,7 @@ def main():
             #-------------------------------------------------------------------
             # Validate
             #-------------------------------------------------------------------
-            generator = td.valid_generator(args.batch_size, 0)
+            generator = td.valid_generator(args.batch_size)
             validation_loss_total = 0
 
             for x, y, gt_boxes in generator:
