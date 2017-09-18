@@ -20,10 +20,15 @@
 
 import pickle
 import random
+import math
 import cv2
+import os
 
+import multiprocessing as mp
 import numpy as np
+import queue as q
 
+from data_queue import DataQueue
 from copy import copy
 
 #-------------------------------------------------------------------------------
@@ -62,28 +67,119 @@ class TrainingData:
     def __batch_generator(self, sample_list_):
         image_size = (self.preset.image_size.w, self.preset.image_size.h)
 
-        def gen_batch(batch_size):
-            sample_list = list(enumerate(sample_list_))
+        #-----------------------------------------------------------------------
+        def process_samples(samples):
+            images = []
+            labels = []
+            gt_boxes = []
+            for s in samples:
+                image_file = s[0].filename
+                label_file = s[1]
+                boxes = s[0].boxes
+
+                image = cv2.resize(cv2.imread(image_file), image_size)
+                label = np.load(label_file)
+
+                images.append(image.astype(np.float32))
+                labels.append(label)
+                gt_boxes.append(boxes)
+
+            images = np.array(images, dtype=np.float32)
+            labels = np.array(labels, dtype=np.float32)
+            return images, labels, gt_boxes
+
+        #-----------------------------------------------------------------------
+        def batch_producer(sample_queue, batch_queue):
+            while True:
+                #---------------------------------------------------------------
+                # Process the sample
+                #---------------------------------------------------------------
+                try:
+                    samples = sample_queue.get(timeout=1)
+                except q.Empty:
+                    break
+
+                images, labels, gt_boxes = process_samples(samples)
+
+                #---------------------------------------------------------------
+                # Pad the result in the case where we don't have enough samples
+                # to fill the entire batch
+                #---------------------------------------------------------------
+                if images.shape[0] < batch_queue.img_shape[0]:
+                    images_norm = np.zeros(batch_queue.img_shape,
+                                           dtype=np.float32)
+                    labels_norm = np.zeros(batch_queue.label_shape,
+                                           dtype=np.float32)
+                    images_norm[:images.shape[0]] = images
+                    labels_norm[:images.shape[0]] = labels
+                    batch_queue.put(images_norm, labels_norm, gt_boxes)
+                else:
+                    batch_queue.put(images, labels, gt_boxes)
+
+        #-----------------------------------------------------------------------
+        def gen_batch(batch_size, num_workers=0):
+            sample_list = copy(sample_list_)
             random.shuffle(sample_list)
 
-            for offset in range(0, len(sample_list), batch_size):
-                samples = sample_list[offset:offset+batch_size]
-                images = []
-                labels = []
-                gt_boxes = []
+            #-------------------------------------------------------------------
+            # Set up the parallel generator
+            #-------------------------------------------------------------------
+            if num_workers > 0:
+                #---------------------------------------------------------------
+                # Set up the queues
+                #---------------------------------------------------------------
+                img_template = np.zeros((batch_size, self.preset.image_size.h,
+                                         self.preset.image_size.w, 3),
+                                        dtype=np.float32)
+                label_template = np.zeros((batch_size, self.preset.num_anchors,
+                                           self.num_classes+5),
+                                          dtype=np.float32)
+                max_size = num_workers*2
+                n_batches = int(math.ceil(len(sample_list_)/batch_size))
+                sample_queue = mp.Queue(n_batches)
+                batch_queue = DataQueue(img_template, label_template, max_size)
 
-                for s in samples:
-                    image_file = s[1][0].filename
-                    label_file = s[1][1]
-                    boxes = s[1][0].boxes
+                #---------------------------------------------------------------
+                # Set up the workers, set the environment variable to make sure
+                # that the internal state of tensorflow is not messed up
+                #---------------------------------------------------------------
+                workers = []
+                os.environ['CUDA_VISIBLE_DEVICES'] = ""
+                for i in range(num_workers):
+                    args = (sample_queue, batch_queue)
+                    w = mp.Process(target=batch_producer, args=args)
+                    workers.append(w)
+                    w.start()
+                del os.environ['CUDA_VISIBLE_DEVICES']
 
-                    image = cv2.resize(cv2.imread(image_file), image_size)
-                    label = np.load(label_file)
+                #---------------------------------------------------------------
+                # Fill the sample queue with data
+                #---------------------------------------------------------------
+                for offset in range(0, len(sample_list), batch_size):
+                    samples = sample_list[offset:offset+batch_size]
+                    sample_queue.put(samples)
 
-                    images.append(image.astype(np.float32))
-                    labels.append(label)
-                    gt_boxes.append(boxes)
+                #---------------------------------------------------------------
+                # Return the data
+                #---------------------------------------------------------------
+                for offset in range(0, len(sample_list), batch_size):
+                    images, labels, gt_boxes = batch_queue.get()
+                    num_items = len(gt_boxes)
+                    yield images[:num_items], labels[:num_items], gt_boxes
 
-                yield np.array(images), np.array(labels), gt_boxes
+                #---------------------------------------------------------------
+                # Join the workers
+                #---------------------------------------------------------------
+                for w in workers:
+                    w.join()
+
+            #-------------------------------------------------------------------
+            # Return a serial generator
+            #-------------------------------------------------------------------
+            else:
+                for offset in range(0, len(sample_list), batch_size):
+                    samples = sample_list[offset:offset+batch_size]
+                    images, labels, gt_boxes = process_samples(samples)
+                    yield images, labels, gt_boxes
 
         return gen_batch
