@@ -27,9 +27,8 @@ import os
 
 import numpy as np
 
-from ssdutils import get_preset_by_name, get_anchors_for_preset, compute_overlap
-from ssdutils import compute_location, anchors2array, box2array
-from utils import load_data_source, str2bool, prop2abs, Size, draw_box
+from ssdutils import get_preset_by_name
+from utils import load_data_source, str2bool, draw_box
 from tqdm import tqdm
 
 #-------------------------------------------------------------------------------
@@ -53,88 +52,11 @@ def annotate(data_dir, samples, colors, sample_name):
         cv2.imwrite(result_dir+basefn, img)
 
 #-------------------------------------------------------------------------------
-def process_overlap(overlap, box, anchor, matches, num_classes, vec):
-    if overlap.idx in matches and matches[overlap.idx] >= overlap.score:
-        return
-
-    matches[overlap.idx] = overlap.score
-    vec[overlap.idx, 0:num_classes+1] = 0
-    vec[overlap.idx, box.labelid]     = 1
-    vec[overlap.idx, num_classes+1:]  = compute_location(box, anchor)
-
-#-------------------------------------------------------------------------------
-def compute_gt(data_dir, samples, anchors, num_classes, name):
-    """
-    Compute the input for the ground truth part of the loss function
-    """
-    result_dir = data_dir+'/ground_truth/'+name.strip()+'/'
-    if not os.path.exists(result_dir):
-        os.makedirs(result_dir)
-
-    vheight = len(anchors)
-    vwidth  = num_classes + 5 # background class + location offsets
-
-    img_size = Size(1000, 1000)
-    anchors_arr  = anchors2array(anchors, img_size)
-
-    #---------------------------------------------------------------------------
-    # Loop over samples
-    #---------------------------------------------------------------------------
-    sample_list = []
-    for sample in tqdm(samples, desc=name, unit='samples'):
-        vec = np.zeros((vheight, vwidth), dtype=np.float32)
-
-        #-----------------------------------------------------------------------
-        # For every box compute the best match and all the matches above 0.5
-        # Jaccard overlap
-        #-----------------------------------------------------------------------
-        overlaps = {}
-        for box in sample.boxes:
-            box_arr = box2array(box, img_size)
-            overlaps[box] = compute_overlap(box_arr, anchors_arr, 0.5)
-
-        #-----------------------------------------------------------------------
-        # Set up the training vector resolving conflicts in favor of a better
-        # match
-        #-----------------------------------------------------------------------
-        vec[:, num_classes]   = 1 # background class
-        vec[:, num_classes+1] = 0 # x offset
-        vec[:, num_classes+2] = 0 # y offset
-        vec[:, num_classes+3] = 0 # log width scale
-        vec[:, num_classes+4] = 0 # log height scale
-
-        matches = {}
-        for box in sample.boxes:
-            for overlap in overlaps[box].good:
-                anchor = anchors[overlap.idx]
-                process_overlap(overlap, box, anchor, matches, num_classes,
-                                vec)
-
-        matches = {}
-        for box in sample.boxes:
-            overlap = overlaps[box].best
-            anchor  = anchors[overlap.idx]
-            process_overlap(overlap, box, anchor, matches, num_classes, vec)
-
-        #-----------------------------------------------------------------------
-        # Save the result
-        #-----------------------------------------------------------------------
-        gt_fn = result_dir+os.path.basename(sample.filename)+'.npy'
-        np.save(gt_fn, vec)
-        sample_list.append((sample, gt_fn))
-
-    #---------------------------------------------------------------------------
-    # Store the sample list
-    #---------------------------------------------------------------------------
-    with open(data_dir+'/'+name.strip()+'-samples.pkl', 'wb') as f:
-        pickle.dump(sample_list, f)
-
-#-------------------------------------------------------------------------------
 def main():
     #---------------------------------------------------------------------------
     # Parse the commandline
     #---------------------------------------------------------------------------
-    parser = argparse.ArgumentParser(description='Train the SSD')
+    parser = argparse.ArgumentParser(description='Process a dataset for SSD')
     parser.add_argument('--data-source', default='pascal_voc',
                         help='data source')
     parser.add_argument('--data-dir', default='pascal-voc',
@@ -143,8 +65,8 @@ def main():
                         help='fraction of the data to be used for validation')
     parser.add_argument('--annotate', type=str2bool, default='False',
                         help="Annotate the data samples")
-    parser.add_argument('--compute-gt', type=str2bool, default='True',
-                        help="Compute the ground truth matrices")
+    parser.add_argument('--compute-td', type=str2bool, default='True',
+                        help="Compute training data")
     parser.add_argument('--preset', default='vgg300',
                         choices=['vgg300', 'vgg512'],
                         help="The neural network preset")
@@ -154,7 +76,7 @@ def main():
     print('[i] Data directory:       ', args.data_dir)
     print('[i] Validation fraction:  ', args.validation_fraction)
     print('[i] Annotate:             ', args.annotate)
-    print('[i] Compute ground truth: ', args.compute_gt)
+    print('[i] Compute training data:', args.compute_td)
     print('[i] Preset:               ', args.preset)
 
     #---------------------------------------------------------------------------
@@ -183,20 +105,15 @@ def main():
         annotate(args.data_dir, source.test_samples,  source.colors, 'test ')
 
     #---------------------------------------------------------------------------
-    # Create the input for the training objective
+    # Compute the training data
     #---------------------------------------------------------------------------
-    if args.compute_gt:
-        preset   = get_preset_by_name(args.preset)
-        anchors  = get_anchors_for_preset(preset)
-        print('[i] Computing the ground truth...')
-        compute_gt(args.data_dir, source.train_samples, anchors,
-                   source.num_classes, 'train')
-        compute_gt(args.data_dir, source.valid_samples, anchors,
-                   source.num_classes, 'valid')
+    if args.compute_td:
+        preset = get_preset_by_name(args.preset)
+        with open(args.data_dir+'/train-samples.pkl', 'wb') as f:
+            pickle.dump(source.train_samples, f)
+        with open(args.data_dir+'/valid-samples.pkl', 'wb') as f:
+            pickle.dump(source.valid_samples, f)
 
-        #-----------------------------------------------------------------------
-        # Store the dataset information
-        #-----------------------------------------------------------------------
         with open(args.data_dir+'/training-data.pkl', 'wb') as f:
             data = {
                 'preset':      preset,
