@@ -27,6 +27,7 @@ import os
 
 import numpy as np
 
+from transforms import *
 from ssdutils import get_preset_by_name
 from utils import load_data_source, str2bool, draw_box
 from tqdm import tqdm
@@ -50,6 +51,24 @@ def annotate(data_dir, samples, colors, sample_name):
         for box in sample.boxes:
             draw_box(img, box, colors[box.label])
         cv2.imwrite(result_dir+basefn, img)
+
+#-------------------------------------------------------------------------------
+def build_train_transforms(preset, num_classes):
+    transforms = [
+        ImageLoaderTransform(),
+        LabelCreatorTransform(preset, num_classes),
+        ResizeTransform(preset.image_size.w, preset.image_size.h)
+    ]
+    return transforms
+
+#-------------------------------------------------------------------------------
+def build_valid_transforms(preset, num_classes):
+    transforms = [
+        ImageLoaderTransform(),
+        LabelCreatorTransform(preset, num_classes),
+        ResizeTransform(preset.image_size.w, preset.image_size.h)
+    ]
+    return transforms
 
 #-------------------------------------------------------------------------------
 def main():
@@ -116,11 +135,15 @@ def main():
 
         with open(args.data_dir+'/training-data.pkl', 'wb') as f:
             data = {
-                'preset':      preset,
+                'preset': preset,
                 'num-classes': source.num_classes,
-                'colors':      source.colors,
-                'lid2name':    source.lid2name,
-                'lname2id':    source.lname2id
+                'colors': source.colors,
+                'lid2name': source.lid2name,
+                'lname2id': source.lname2id,
+                'train-transforms': build_train_transforms(preset,
+                                                           source.num_classes),
+                'valid-transforms': build_valid_transforms(preset,
+                                                           source.num_classes)
             }
             pickle.dump(data, f)
 
