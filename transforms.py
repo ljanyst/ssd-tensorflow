@@ -120,3 +120,15 @@ class ResizeTransform(Transform):
         alg = random.choice(self.algorithms)
         resized = cv2.resize(data, (self.width, self.height), interpolation=alg)
         return resized, label, gt
+
+#-------------------------------------------------------------------------------
+class RandomTransform(Transform):
+    """
+    Call another transform with a given probability
+    Parameters: prob, transform
+    """
+    def __call__(self, data, label, gt):
+        p = random.uniform(0, 1)
+        if p < self.prob:
+            return self.transform(data, label, gt)
+        return data, label, gt
