@@ -107,6 +107,12 @@ def build_train_transforms(preset, num_classes):
     tf_sample_picker = SamplePickerTransform(samplers=samplers)
 
     #---------------------------------------------------------------------------
+    # Horizontal flip
+    #---------------------------------------------------------------------------
+    tf_flip = HorizontalFlipTransform()
+    tf_rnd_flip = RandomTransform(prob=0.5, transform=tf_flip)
+
+    #---------------------------------------------------------------------------
     # Transform list
     #---------------------------------------------------------------------------
     transforms = [
@@ -117,6 +123,7 @@ def build_train_transforms(preset, num_classes):
         tf_rnd_saturation,
         tf_rnd_expand,
         tf_sample_picker,
+        tf_rnd_flip,
         LabelCreatorTransform(preset=preset, num_classes=num_classes),
         tf_resize
     ]
