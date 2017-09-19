@@ -270,3 +270,76 @@ class ExpandTransform(Transform):
         gt = transform_gt(gt, new_size, h_off, w_off)
 
         return img, label, gt
+
+#-------------------------------------------------------------------------------
+class SamplerTransform(Transform):
+    """
+    Sample a fraction of the image according to given parameters
+    Params: min_scale, max_scale, min_aspect_ratio, max_aspect_ratio,
+            min_jaccard_overlap
+    """
+    def __call__(self, data, label, gt):
+        #-----------------------------------------------------------------------
+        # Check whether to sample or not
+        #-----------------------------------------------------------------------
+        if not self.sample:
+            return data, label, gt
+
+        #-----------------------------------------------------------------------
+        # Retry sampling a couple of times
+        #-----------------------------------------------------------------------
+        source_boxes = anchors2array(gt.boxes, gt.imgsize)
+        box = None
+        box_arr = None
+        for _ in range(self.max_trials):
+            #-------------------------------------------------------------------
+            # Sample a bounding box
+            #-------------------------------------------------------------------
+            scale = random.uniform(self.min_scale, self.max_scale)
+            aspect_ratio = random.uniform(self.min_aspect_ratio,
+                                          self.max_aspect_ratio)
+
+            # make sure width and height will not be larger than 1
+            aspect_ratio = max(aspect_ratio, scale**2)
+            aspect_ratio = min(aspect_ratio, 1/(scale**2))
+
+            width = scale*sqrt(aspect_ratio)
+            height = scale/sqrt(aspect_ratio)
+            cx = 0.5*width + random.uniform(0, 1-width)
+            cy = 0.5*height + random.uniform(0, 1-height)
+            center = Point(cx, cy)
+            size = Size(width, height)
+
+            #-------------------------------------------------------------------
+            # Check if the box satisfies the jaccard overlap constraint
+            #-------------------------------------------------------------------
+            box_arr = np.array(prop2abs(center, size, gt.imgsize))
+            overlap = compute_overlap(box_arr, source_boxes, 0)
+            if overlap.best.score >= self.min_jaccard_overlap:
+                box = Box(None, None, center, size)
+                break
+
+        #-----------------------------------------------------------------------
+        # Crop the box and adjust the ground truth
+        #-----------------------------------------------------------------------
+        new_size = Size(box_arr[1]-box_arr[0], box_arr[3]-box_arr[2])
+        w_off = -box_arr[0]
+        h_off = -box_arr[2]
+        data = data[box_arr[2]:box_arr[3], box_arr[0]:box_arr[1]]
+        gt = transform_gt(gt, new_size, h_off, w_off)
+
+        return data, label, gt
+
+#-------------------------------------------------------------------------------
+class SamplePickerTransform(Transform):
+    """
+    Run a bunch of sample transforms and return one of the produced samples
+    Parameters: samplers
+    """
+    def __call__(self, data, label, gt):
+        samples = []
+        for sampler in self.samplers:
+            sample = sampler(data, label, gt)
+            if sample is not None:
+                samples.append(sample)
+        return random.choice(samples)
