@@ -24,8 +24,9 @@ import random
 import numpy as np
 
 from ssdutils import get_anchors_for_preset, get_preset_by_name, anchors2array
-from ssdutils import box2array, compute_overlap, compute_location
-from utils import Size
+from ssdutils import box2array, compute_overlap, compute_location, anchors2array
+from utils import Size, Sample, Point, Box, abs2prop, prop2abs
+from math import sqrt
 
 #-------------------------------------------------------------------------------
 class Transform:
@@ -196,3 +197,76 @@ class SaturationTransform(Transform):
         data = data.astype(np.uint8)
         data = cv2.cvtColor(data, cv2.COLOR_HSV2BGR)
         return data, label, gt
+
+#-------------------------------------------------------------------------------
+def transform_box(box, orig_size, new_size, h_off, w_off):
+    #---------------------------------------------------------------------------
+    # Compute the new coordinates of the box
+    #---------------------------------------------------------------------------
+    xmin, xmax, ymin, ymax = prop2abs(box.center, box.size, orig_size)
+    xmin += w_off
+    xmax += w_off
+    ymin += h_off
+    ymax += h_off
+
+    #---------------------------------------------------------------------------
+    # Check if the center falls within the image
+    #---------------------------------------------------------------------------
+    width = xmax - xmin
+    height = ymax - ymin
+    new_cx = xmin + int(width/2)
+    new_cy = ymin + int(height/2)
+    if new_cx < 0 or new_cx >= new_size.w:
+        return None
+    if new_cy < 0 or new_cy >= new_size.h:
+        return None
+
+    #---------------------------------------------------------------------------
+    # Normalize the boundries
+    #---------------------------------------------------------------------------
+    xmin = max(0, xmin)
+    xmax = min(new_size.w-1, xmax)
+    ymin = max(0, ymin)
+    ymax = min(new_size.h-1, ymax)
+    center, size = abs2prop(xmin, xmax, ymin, ymax, new_size)
+    return Box(box.label, box.labelid, center, size)
+
+#-------------------------------------------------------------------------------
+def transform_gt(gt, new_size, h_off, w_off):
+    boxes = []
+    for box in gt.boxes:
+        box = transform_box(box, gt.imgsize, new_size, h_off, w_off)
+        if box is None:
+            continue
+        boxes.append(box)
+    return Sample(gt.filename, boxes, new_size)
+
+#-------------------------------------------------------------------------------
+class ExpandTransform(Transform):
+    """
+    Expand the image and fill the empty space with the mean value
+    Parameters: max_ratio, mean_value
+    """
+    def __call__(self, data, label, gt):
+        #-----------------------------------------------------------------------
+        # Calculate sizes and offsets
+        #-----------------------------------------------------------------------
+        ratio = random.uniform(1, self.max_ratio)
+        orig_size = gt.imgsize
+        new_size = Size(int(orig_size.w*ratio), int(orig_size.h*ratio))
+        h_off = random.randint(0, new_size.h-orig_size.h)
+        w_off = random.randint(0, new_size.w-orig_size.w)
+
+        #-----------------------------------------------------------------------
+        # Create the new image and place the input image in it
+        #-----------------------------------------------------------------------
+        img = np.zeros((new_size.h, new_size.w, 3))
+        img[:, :] = np.array(self.mean_value)
+        img[h_off:h_off+orig_size.h, w_off:w_off+orig_size.w, :] = data
+
+        #-----------------------------------------------------------------------
+        # Transform the ground truth
+        #-----------------------------------------------------------------------
+        gt = transform_gt(gt, new_size, h_off, w_off)
+
+        return img, label, gt
