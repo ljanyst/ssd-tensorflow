@@ -81,15 +81,22 @@ def build_train_transforms(preset, num_classes):
     tf_rnd_saturation = RandomTransform(prob=0.5, transform=tf_saturation)
 
     #---------------------------------------------------------------------------
+    # Expand sample
+    #---------------------------------------------------------------------------
+    tf_expand = ExpandTransform(max_ratio=4.0, mean_value=[104, 117, 123])
+    tf_rnd_expand = RandomTransform(prob=0.5, transform=tf_expand)
+
+    #---------------------------------------------------------------------------
     # Transform list
     #---------------------------------------------------------------------------
     transforms = [
         ImageLoaderTransform(),
-        LabelCreatorTransform(preset=preset, num_classes=num_classes),
         tf_rnd_brightness,
         tf_rnd_contrast,
         tf_rnd_hue,
         tf_rnd_saturation,
+        tf_rnd_expand,
+        LabelCreatorTransform(preset=preset, num_classes=num_classes),
         tf_resize
     ]
     return transforms
