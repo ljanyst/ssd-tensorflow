@@ -343,3 +343,19 @@ class SamplePickerTransform(Transform):
             if sample is not None:
                 samples.append(sample)
         return random.choice(samples)
+
+#-------------------------------------------------------------------------------
+class HorizontalFlipTransform(Transform):
+    """
+    Horizontally flip the image
+    """
+    def __call__(self, data, label, gt):
+        data = cv2.flip(data, 1)
+        boxes = []
+        for box in gt.boxes:
+            center = Point(1-box.center.x, box.center.y)
+            box = Box(box.label, box.labelid, center, box.size)
+            boxes.append(box)
+        gt = Sample(gt.filename, boxes, gt.imgsize)
+
+        return data, label, gt
