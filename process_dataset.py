@@ -54,19 +54,29 @@ def annotate(data_dir, samples, colors, sample_name):
 
 #-------------------------------------------------------------------------------
 def build_train_transforms(preset, num_classes):
+    tf_resize = ResizeTransform(width=preset.image_size.w,
+                                height=preset.image_size.h,
+                                algorithms=[cv2.INTER_LINEAR,
+                                            cv2.INTER_AREA,
+                                            cv2.INTER_NEAREST,
+                                            cv2.INTER_CUBIC,
+                                            cv2.INTER_LANCZOS4])
     transforms = [
         ImageLoaderTransform(),
         LabelCreatorTransform(preset=preset, num_classes=num_classes),
-        ResizeTransform(width=preset.image_size.w, height=preset.image_size.h)
+        tf_resize
     ]
     return transforms
 
 #-------------------------------------------------------------------------------
 def build_valid_transforms(preset, num_classes):
+    tf_resize = ResizeTransform(width=preset.image_size.w,
+                                height=preset.image_size.h,
+                                algorithms=[cv2.INTER_LINEAR])
     transforms = [
         ImageLoaderTransform(),
         LabelCreatorTransform(preset=preset, num_classes=num_classes),
-        ResizeTransform(width=preset.image_size.w, height=preset.image_size.h)
+        tf_resize
     ]
     return transforms
 
