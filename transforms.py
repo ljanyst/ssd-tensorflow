@@ -27,9 +27,18 @@ from ssdutils import box2array, compute_overlap, compute_location
 from utils import Size
 
 #-------------------------------------------------------------------------------
-class ImageLoaderTransform:
-    #---------------------------------------------------------------------------
-    def transform(self, data, label, gt):
+class Transform:
+    def __init__(self, **kwargs):
+        for arg, val in kwargs.items():
+            setattr(self, arg, val)
+        self.initialized = False
+
+#-------------------------------------------------------------------------------
+class ImageLoaderTransform(Transform):
+    """
+    Load and image from the file specified in the Sample object
+    """
+    def __call__(self, data, label, gt):
         return cv2.imread(gt.filename), label, gt
 
 #-------------------------------------------------------------------------------
@@ -43,13 +52,11 @@ def process_overlap(overlap, box, anchor, matches, num_classes, vec):
     vec[overlap.idx, num_classes+1:]  = compute_location(box, anchor)
 
 #-------------------------------------------------------------------------------
-class LabelCreatorTransform:
-    #---------------------------------------------------------------------------
-    def __init__(self, preset, num_classes):
-        self.preset = preset
-        self.num_classes = num_classes
-        self.initialized = False
-
+class LabelCreatorTransform(Transform):
+    """
+    Create a label vector out of a ground trut sample
+    Parameters: preset, num_classes
+    """
     #---------------------------------------------------------------------------
     def initialize(self):
         self.anchors = get_anchors_for_preset(self.preset)
@@ -60,7 +67,7 @@ class LabelCreatorTransform:
         self.initialized = True
 
     #---------------------------------------------------------------------------
-    def transform(self, data, label, gt):
+    def __call__(self, data, label, gt):
         #-----------------------------------------------------------------------
         # Initialize the data vector and other variables
         #-----------------------------------------------------------------------
@@ -103,12 +110,11 @@ class LabelCreatorTransform:
         return data, vec, gt
 
 #-------------------------------------------------------------------------------
-class ResizeTransform:
-    #---------------------------------------------------------------------------
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-
-    #---------------------------------------------------------------------------
-    def transform(self, data, label, gt):
-        return cv2.resize(data, (self.width, self.height)), label, gt
+class ResizeTransform(Transform):
+    """
+    Resize an image
+    Parameters: width, height
+    """
+    def __call__(self, data, label, gt):
+        resized = cv2.resize(data, (self.width, self.height))
+        return resized, label, gt
