@@ -151,17 +151,22 @@ class TrainingData:
                 batch_queue = DataQueue(img_template, label_template, max_size)
 
                 #---------------------------------------------------------------
-                # Set up the workers, set the environment variable to make sure
-                # that the internal state of tensorflow is not messed up
+                # Set up the workers. Set the environment variable to make sure
+                # that the internal state of tensorflow is not messed up. Also
+                # limit the number of OpenCV threads so that it does not hang
+                # in color transforms in child processes.
                 #---------------------------------------------------------------
                 workers = []
                 os.environ['CUDA_VISIBLE_DEVICES'] = ""
+                cv2_num_threads = cv2.getNumThreads()
+                cv2.setNumThreads(0)
                 for i in range(num_workers):
                     args = (sample_queue, batch_queue)
                     w = mp.Process(target=batch_producer, args=args)
                     workers.append(w)
                     w.start()
                 del os.environ['CUDA_VISIBLE_DEVICES']
+                cv2.setNumThreads(cv2_num_threads)
 
                 #---------------------------------------------------------------
                 # Fill the sample queue with data
