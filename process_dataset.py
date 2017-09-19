@@ -53,6 +53,12 @@ def annotate(data_dir, samples, colors, sample_name):
         cv2.imwrite(result_dir+basefn, img)
 
 #-------------------------------------------------------------------------------
+def build_sampler(overlap):
+    return SamplerTransform(sample=True, min_scale=0.3, max_scale=1.0,
+                            min_aspect_ratio=0.5, max_aspect_ratio=2.0,
+                            min_jaccard_overlap=overlap, max_trials=50)
+
+#-------------------------------------------------------------------------------
 def build_train_transforms(preset, num_classes):
     #---------------------------------------------------------------------------
     # Resizing
@@ -87,6 +93,20 @@ def build_train_transforms(preset, num_classes):
     tf_rnd_expand = RandomTransform(prob=0.5, transform=tf_expand)
 
     #---------------------------------------------------------------------------
+    # Samplers
+    #---------------------------------------------------------------------------
+    samplers = [
+        SamplerTransform(sample=False),
+        build_sampler(0.1),
+        build_sampler(0.3),
+        build_sampler(0.5),
+        build_sampler(0.7),
+        build_sampler(0.9),
+        build_sampler(1.0)
+    ]
+    tf_sample_picker = SamplePickerTransform(samplers=samplers)
+
+    #---------------------------------------------------------------------------
     # Transform list
     #---------------------------------------------------------------------------
     transforms = [
@@ -96,6 +116,7 @@ def build_train_transforms(preset, num_classes):
         tf_rnd_hue,
         tf_rnd_saturation,
         tf_rnd_expand,
+        tf_sample_picker,
         LabelCreatorTransform(preset=preset, num_classes=num_classes),
         tf_resize
     ]
