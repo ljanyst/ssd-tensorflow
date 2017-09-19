@@ -19,6 +19,7 @@
 #-------------------------------------------------------------------------------
 
 import cv2
+import random
 
 import numpy as np
 
@@ -113,8 +114,9 @@ class LabelCreatorTransform(Transform):
 class ResizeTransform(Transform):
     """
     Resize an image
-    Parameters: width, height
+    Parameters: width, height, algorithms
     """
     def __call__(self, data, label, gt):
-        resized = cv2.resize(data, (self.width, self.height))
+        alg = random.choice(self.algorithms)
+        resized = cv2.resize(data, (self.width, self.height), interpolation=alg)
         return resized, label, gt
