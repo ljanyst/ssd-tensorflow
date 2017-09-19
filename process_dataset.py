@@ -54,6 +54,9 @@ def annotate(data_dir, samples, colors, sample_name):
 
 #-------------------------------------------------------------------------------
 def build_train_transforms(preset, num_classes):
+    #---------------------------------------------------------------------------
+    # Resizing
+    #---------------------------------------------------------------------------
     tf_resize = ResizeTransform(width=preset.image_size.w,
                                 height=preset.image_size.h,
                                 algorithms=[cv2.INTER_LINEAR,
@@ -61,9 +64,32 @@ def build_train_transforms(preset, num_classes):
                                             cv2.INTER_NEAREST,
                                             cv2.INTER_CUBIC,
                                             cv2.INTER_LANCZOS4])
+
+    #---------------------------------------------------------------------------
+    # Image distortions
+    #---------------------------------------------------------------------------
+    tf_brightness = BrightnessTransform(delta=32)
+    tf_rnd_brightness = RandomTransform(prob=0.5, transform=tf_brightness)
+
+    tf_contrast = ContrastTransform(lower=0.5, upper=1.5)
+    tf_rnd_contrast = RandomTransform(prob=0.5, transform=tf_contrast)
+
+    tf_hue = HueTransform(delta=18)
+    tf_rnd_hue = RandomTransform(prob=0.5, transform=tf_hue)
+
+    tf_saturation = SaturationTransform(lower=0.5, upper=1.5)
+    tf_rnd_saturation = RandomTransform(prob=0.5, transform=tf_saturation)
+
+    #---------------------------------------------------------------------------
+    # Transform list
+    #---------------------------------------------------------------------------
     transforms = [
         ImageLoaderTransform(),
         LabelCreatorTransform(preset=preset, num_classes=num_classes),
+        tf_rnd_brightness,
+        tf_rnd_contrast,
+        tf_rnd_hue,
+        tf_rnd_saturation,
         tf_resize
     ]
     return transforms
