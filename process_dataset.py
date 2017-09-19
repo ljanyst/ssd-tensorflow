@@ -56,8 +56,8 @@ def annotate(data_dir, samples, colors, sample_name):
 def build_train_transforms(preset, num_classes):
     transforms = [
         ImageLoaderTransform(),
-        LabelCreatorTransform(preset, num_classes),
-        ResizeTransform(preset.image_size.w, preset.image_size.h)
+        LabelCreatorTransform(preset=preset, num_classes=num_classes),
+        ResizeTransform(width=preset.image_size.w, height=preset.image_size.h)
     ]
     return transforms
 
@@ -65,8 +65,8 @@ def build_train_transforms(preset, num_classes):
 def build_valid_transforms(preset, num_classes):
     transforms = [
         ImageLoaderTransform(),
-        LabelCreatorTransform(preset, num_classes),
-        ResizeTransform(preset.image_size.w, preset.image_size.h)
+        LabelCreatorTransform(preset=preset, num_classes=num_classes),
+        ResizeTransform(width=preset.image_size.w, height=preset.image_size.h)
     ]
     return transforms
 
