@@ -80,7 +80,7 @@ class TrainingData:
         def run_transforms(sample):
             args = sample
             for t in transforms:
-                args = t.transform(*args)
+                args = t(*args)
             return args
 
         #-----------------------------------------------------------------------
