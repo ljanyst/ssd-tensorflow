@@ -49,7 +49,7 @@ label_defs = [
     Label('dog',         rgb2bgr((250, 170,  30))),
     Label('horse',       rgb2bgr((220, 220,   0))),
     Label('motorbike',   rgb2bgr((107, 142,  35))),
-    Label('person',      rgb2bgr((152, 251, 152))),
+    Label('person',      rgb2bgr(( 52, 151,  52))),
     Label('pottedplant', rgb2bgr(( 70, 130, 180))),
     Label('sheep',       rgb2bgr((220,  20,  60))),
     Label('sofa',        rgb2bgr((  0,   0, 142))),
