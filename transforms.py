@@ -319,6 +319,9 @@ class SamplerTransform(Transform):
                 box = Box(None, None, center, size)
                 break
 
+        if box is None:
+            return None
+
         #-----------------------------------------------------------------------
         # Crop the box and adjust the ground truth
         #-----------------------------------------------------------------------
