@@ -105,7 +105,7 @@ def main():
 
         summary_writer  = tf.summary.FileWriter(args.tensorboard_dir,
                                                 sess.graph)
-        saver           = tf.train.Saver(max_to_keep=10)
+        saver           = tf.train.Saver(max_to_keep=20)
 
         n_train_batches = int(math.ceil(td.num_train/args.batch_size))
         initialize_uninitialized_variables(sess)
