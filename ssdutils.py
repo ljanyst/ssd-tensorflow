@@ -163,8 +163,11 @@ def compute_overlap(box_arr, anchors_arr, threshold):
 
     good_idxs = np.nonzero(overlap)[0]
     best_idx  = np.argmax(iou)
-    best = Score(best_idx, iou[best_idx])
+    best = None
     good = []
+
+    if iou[best_idx] > threshold:
+        best = Score(best_idx, iou[best_idx])
 
     for idx in good_idxs:
         good.append(Score(idx, iou[idx]))
