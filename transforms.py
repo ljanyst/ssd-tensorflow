@@ -106,6 +106,8 @@ class LabelCreatorTransform(Transform):
         matches = {}
         for box in gt.boxes:
             overlap = overlaps[box].best
+            if not overlap:
+                continue
             anchor  = self.anchors[overlap.idx]
             process_overlap(overlap, box, anchor, matches, self.num_classes, vec)
 
@@ -315,7 +317,7 @@ class SamplerTransform(Transform):
             #-------------------------------------------------------------------
             box_arr = np.array(prop2abs(center, size, gt.imgsize))
             overlap = compute_overlap(box_arr, source_boxes, 0)
-            if overlap.best.score >= self.min_jaccard_overlap:
+            if overlap.best and overlap.best.score >= self.min_jaccard_overlap:
                 box = Box(None, None, center, size)
                 break
 
