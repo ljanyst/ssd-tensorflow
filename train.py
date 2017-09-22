@@ -149,8 +149,7 @@ def main():
             for x, y, gt_boxes in tqdm(generator, total=n_train_batches,
                                        desc=description, unit='batches'):
                 feed = {net.image_input:  x,
-                        labels:           y,
-                        net.keep_prob:    1}
+                        labels:           y}
                 result, loss_batch, _ = sess.run([net.result, loss, optimizer],
                                                  feed_dict=feed)
                 training_loss_total += loss_batch * x.shape[0]
@@ -173,8 +172,7 @@ def main():
 
             for x, y, gt_boxes in generator:
                 feed = {net.image_input:  x,
-                        labels:           y,
-                        net.keep_prob:    1}
+                        labels:           y}
                 result, loss_batch = sess.run([net.result, loss],
                                               feed_dict=feed)
                 validation_loss_total += loss_batch * x.shape[0]
