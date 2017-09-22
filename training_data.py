@@ -151,14 +151,21 @@ class TrainingData:
                 batch_queue = DataQueue(img_template, label_template, max_size)
 
                 #---------------------------------------------------------------
-                # Set up the workers.
+                # Set up the workers. Make sure we can fork safely even if
+                # OpenCV has been compiled with CUDA and multi-threading
+                # support.
                 #---------------------------------------------------------------
                 workers = []
+                os.environ['CUDA_VISIBLE_DEVICES'] = ""
+                cv2_num_threads = cv2.getNumThreads()
+                cv2.setNumThreads(1)
                 for i in range(num_workers):
                     args = (sample_queue, batch_queue)
                     w = mp.Process(target=batch_producer, args=args)
                     workers.append(w)
                     w.start()
+                del os.environ['CUDA_VISIBLE_DEVICES']
+                cv2.setNumThreads(cv2_num_threads)
 
                 #---------------------------------------------------------------
                 # Fill the sample queue with data
