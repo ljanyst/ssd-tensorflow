@@ -475,12 +475,12 @@ class SSDVGG:
 
             # Final loss
             # Shape: scalar
-            loss = tf.reduce_mean(total_losses)
+            loss = tf.reduce_mean(total_losses, name='loss')
 
         #-----------------------------------------------------------------------
         # Build the optimizer
         #-----------------------------------------------------------------------
         with tf.variable_scope('optimizer'):
-            optimizer = tf.train.AdamOptimizer(learning_rate)
-            optimizer = optimizer.minimize(loss)
+            optimizer = tf.train.AdamOptimizer(learning_rate, name='optimizer')
+            optimizer = optimizer.minimize(loss, name='minimizer')
         return optimizer, loss
