@@ -223,6 +223,8 @@ def main():
             training_imgs.push(e, training_imgs_samples)
             validation_imgs.push(e, validation_imgs_samples)
 
+            summary_writer.flush()
+
             #-------------------------------------------------------------------
             # Save a checktpoint
             #-------------------------------------------------------------------
