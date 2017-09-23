@@ -55,6 +55,8 @@ def main():
                         help='name of the tensorboard data directory')
     parser.add_argument('--checkpoint-interval', type=int, default=50,
                         help='checkpoint interval')
+    parser.add_argument('--learning-rate', type=float, default=0.0005,
+                        help='learning rate')
     parser.add_argument('--num-workers', type=int, default=mp.cpu_count(),
                         help='number of parallel generators')
 
@@ -67,6 +69,7 @@ def main():
     print('[i] Batch size:           ', args.batch_size)
     print('[i] Tensorboard directory:', args.tensorboard_dir)
     print('[i] Checkpoint interval:  ', args.checkpoint_interval)
+    print('[i] Learning rate:        ', args.learning_rate)
     print('[i] Number of workers:    ', args.num_workers)
 
     try:
@@ -101,7 +104,7 @@ def main():
         labels = tf.placeholder(tf.float32,
                                 shape=[None, None, td.num_classes+5])
 
-        optimizer, loss = net.get_optimizer(labels)
+        optimizer, loss = net.get_optimizer(labels, args.learning_rate)
 
         summary_writer  = tf.summary.FileWriter(args.tensorboard_dir,
                                                 sess.graph)
