@@ -111,13 +111,13 @@ def get_anchors_for_preset(preset):
     for k in range(len(scales)):
         s  = scales[k]
         fk = preset.map_sizes[k][0]
-        for i in range(fk):
-            x = (i+0.5)/float(fk)
+        for size in box_sizes[s]:
             for j in range(fk):
                 y = (j+0.5)/float(fk)
-                for size in box_sizes[s]:
+                for i in range(fk):
+                    x = (i+0.5)/float(fk)
                     box = Anchor(Point(x, y), Size(size[0], size[1]),
-                                 j, i, s, k)
+                                 i, j, s, k)
                     anchors.append(box)
     return anchors
 
