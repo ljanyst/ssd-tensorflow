@@ -53,13 +53,13 @@ def annotate(data_dir, samples, colors, sample_name):
         cv2.imwrite(result_dir+basefn, img)
 
 #-------------------------------------------------------------------------------
-def build_sampler(overlap):
+def build_sampler(overlap, trials):
     return SamplerTransform(sample=True, min_scale=0.3, max_scale=1.0,
                             min_aspect_ratio=0.5, max_aspect_ratio=2.0,
-                            min_jaccard_overlap=overlap, max_trials=50)
+                            min_jaccard_overlap=overlap, max_trials=trials)
 
 #-------------------------------------------------------------------------------
-def build_train_transforms(preset, num_classes):
+def build_train_transforms(preset, num_classes, sampler_trials, expand_prob):
     #---------------------------------------------------------------------------
     # Resizing
     #---------------------------------------------------------------------------
@@ -90,19 +90,19 @@ def build_train_transforms(preset, num_classes):
     # Expand sample
     #---------------------------------------------------------------------------
     tf_expand = ExpandTransform(max_ratio=4.0, mean_value=[104, 117, 123])
-    tf_rnd_expand = RandomTransform(prob=0.5, transform=tf_expand)
+    tf_rnd_expand = RandomTransform(prob=expand_prob, transform=tf_expand)
 
     #---------------------------------------------------------------------------
     # Samplers
     #---------------------------------------------------------------------------
     samplers = [
         SamplerTransform(sample=False),
-        build_sampler(0.1),
-        build_sampler(0.3),
-        build_sampler(0.5),
-        build_sampler(0.7),
-        build_sampler(0.9),
-        build_sampler(1.0)
+        build_sampler(0.1, sampler_trials),
+        build_sampler(0.3, sampler_trials),
+        build_sampler(0.5, sampler_trials),
+        build_sampler(0.7, sampler_trials),
+        build_sampler(0.9, sampler_trials),
+        build_sampler(1.0, sampler_trials)
     ]
     tf_sample_picker = SamplePickerTransform(samplers=samplers)
 
@@ -153,6 +153,10 @@ def main():
                         help='data directory')
     parser.add_argument('--validation-fraction', type=float, default=0.025,
                         help='fraction of the data to be used for validation')
+    parser.add_argument('--expand-probability', type=float, default=0.5,
+                        help='probability of running sample expander')
+    parser.add_argument('--sampler-trials', type=int, default=50,
+                        help='number of time a sampler tries to find a sample')
     parser.add_argument('--annotate', type=str2bool, default='False',
                         help="Annotate the data samples")
     parser.add_argument('--compute-td', type=str2bool, default='True',
@@ -165,6 +169,8 @@ def main():
     print('[i] Data source:          ', args.data_source)
     print('[i] Data directory:       ', args.data_dir)
     print('[i] Validation fraction:  ', args.validation_fraction)
+    print('[i] Expand probability:   ', args.expand_probability)
+    print('[i] Sampler trials:       ', args.sampler_trials)
     print('[i] Annotate:             ', args.annotate)
     print('[i] Compute training data:', args.compute_td)
     print('[i] Preset:               ', args.preset)
@@ -212,7 +218,8 @@ def main():
                 'lid2name': source.lid2name,
                 'lname2id': source.lname2id,
                 'train-transforms': build_train_transforms(preset,
-                                                           source.num_classes),
+                                       source.num_classes, args.sampler_trials,
+                                       args.expand_probability ),
                 'valid-transforms': build_valid_transforms(preset,
                                                            source.num_classes)
             }
