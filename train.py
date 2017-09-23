@@ -220,9 +220,8 @@ def main():
             #-------------------------------------------------------------------
             # Push the image summaries
             #-------------------------------------------------------------------
-            if e % 5 == 0:
-                training_imgs.push(e, training_imgs_samples)
-                validation_imgs.push(e, validation_imgs_samples)
+            training_imgs.push(e, training_imgs_samples)
+            validation_imgs.push(e, validation_imgs_samples)
 
             #-------------------------------------------------------------------
             # Save a checktpoint
