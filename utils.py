@@ -185,7 +185,9 @@ class ImageSummary:
             img = cv2.resize(sample[0], (512, 512))
             for _, box in sample[1]:
                 draw_box(img, box, self.colors[box.label])
-            imgs[i] = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img[img>255] = 255
+            img[img<0] = 0
+            imgs[i] = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_BGR2RGB)
 
         feed = {self.img_placeholder: imgs}
         summary = self.session.run(self.img_summary_op, feed_dict=feed)
