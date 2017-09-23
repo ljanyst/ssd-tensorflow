@@ -148,6 +148,10 @@ def main():
             training_loss_total = 0
             for x, y, gt_boxes in tqdm(generator, total=n_train_batches,
                                        desc=description, unit='batches'):
+
+                if len(training_imgs_samples) < 3:
+                    saved_images = x[:3]
+
                 feed = {net.image_input:  x,
                         labels:           y}
                 result, loss_batch, _ = sess.run([net.result, loss, optimizer],
@@ -160,7 +164,7 @@ def main():
                     training_ap_calc.add_detections(gt_boxes[i], boxes)
 
                     if len(training_imgs_samples) < 3:
-                        training_imgs_samples.append((np.copy(x[i]), boxes))
+                        training_imgs_samples.append((saved_images[i], boxes))
 
             training_loss_total /= td.num_train
 
