@@ -75,6 +75,13 @@ def array2tensor(x, name):
     return tensor
 
 #-------------------------------------------------------------------------------
+def l2_normalization(x, initial_scale, channels, name):
+    with tf.variable_scope(name):
+        scale = array2tensor(initial_scale*np.ones(channels), 'scale')
+        x = scale*tf.nn.l2_normalize(x, dim=-1)
+    return x
+
+#-------------------------------------------------------------------------------
 class SSDVGG:
     #---------------------------------------------------------------------------
     def __init__(self, session):
@@ -100,6 +107,7 @@ class SSDVGG:
         if a_trous: self.__build_vgg_mods_a_trous()
         else: self.__build_vgg_mods()
         self.__build_ssd_layers()
+        self.__build_norms()
         self.__select_feature_maps()
         self.__build_classifiers()
         self.__built = True
@@ -263,9 +271,13 @@ class SSDVGG:
         self.ssd_conv12_2 = conv_map(self.ssd_conv12_1, 256, 3, 1, 'conv12_2', 'VALID')
 
     #---------------------------------------------------------------------------
+    def __build_norms(self):
+        self.norm_conv4_3 = l2_normalization(self.vgg_conv4_3, 20, 512, 'norm_conv4_3')
+
+    #---------------------------------------------------------------------------
     def __select_feature_maps(self):
         self.__maps = [
-            self.vgg_conv4_3,
+            self.norm_conv4_3,
             self.mod_conv7,
             self.ssd_conv8_2,
             self.ssd_conv9_2,
