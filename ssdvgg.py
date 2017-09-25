@@ -48,7 +48,8 @@ def conv_map(x, size, shape, stride, name, padding='SAME'):
         x = tf.nn.conv2d(x, w, strides=[1, stride, stride, 1], padding=padding)
         x = tf.nn.bias_add(x, b)
         x = tf.nn.relu(x)
-    return x
+        l2 = tf.nn.l2_loss(w) + tf.nn.l2_loss(b)
+    return x, l2
 
 #-------------------------------------------------------------------------------
 def classifier(x, size, mapsize, name):
@@ -60,7 +61,8 @@ def classifier(x, size, mapsize, name):
         x = tf.nn.conv2d(x, w, strides=[1, 1, 1, 1], padding='SAME')
         x = tf.nn.bias_add(x, b)
         x = tf.reshape(x, [-1, mapsize.w*mapsize.h, size])
-    return x
+        l2 = tf.nn.l2_loss(w) + tf.nn.l2_loss(b)
+    return x, l2
 
 #-------------------------------------------------------------------------------
 def smooth_l1_loss(x):
@@ -79,7 +81,8 @@ def l2_normalization(x, initial_scale, channels, name):
     with tf.variable_scope(name):
         scale = array2tensor(initial_scale*np.ones(channels), 'scale')
         x = scale*tf.nn.l2_normalize(x, dim=-1)
-    return x
+        l2 = tf.nn.l2_loss(scale)
+    return x, l2
 
 #-------------------------------------------------------------------------------
 class SSDVGG:
@@ -100,8 +103,9 @@ class SSDVGG:
                               or string "tqdm"
         """
         self.num_classes = num_classes+1
-        self.num_vars    = num_classes+5
-        self.preset      = preset
+        self.num_vars = num_classes+5
+        self.preset = preset
+        self.l2_loss = 0
         self.__download_vgg(vgg_dir, progress_hook)
         self.__load_vgg(vgg_dir)
         if a_trous: self.__build_vgg_mods_a_trous()
@@ -270,25 +274,41 @@ class SSDVGG:
             self.mod_conv7 = x
 
     #---------------------------------------------------------------------------
+    def __with_loss(self, x, l2_loss):
+        self.l2_loss += l2_loss
+        return x
+
+    #---------------------------------------------------------------------------
     def __build_ssd_layers(self):
-        self.ssd_conv8_1  = conv_map(self.mod_conv7,    256, 1, 1, 'conv8_1')
-        self.ssd_conv8_2  = conv_map(self.ssd_conv8_1,  512, 3, 2, 'conv8_2')
-        self.ssd_conv9_1  = conv_map(self.ssd_conv8_2,  128, 1, 1, 'conv9_1')
-        self.ssd_conv9_2  = conv_map(self.ssd_conv9_1,  256, 3, 2, 'conv9_2')
-        self.ssd_conv10_1 = conv_map(self.ssd_conv9_2,  128, 1, 1, 'conv10_1')
-        self.ssd_conv10_2 = conv_map(self.ssd_conv10_1, 256, 3, 1, 'conv10_2', 'VALID')
-        self.ssd_conv11_1 = conv_map(self.ssd_conv10_2, 128, 1, 1, 'conv11_1')
-        self.ssd_conv11_2 = conv_map(self.ssd_conv11_1, 256, 3, 1, 'conv11_2', 'VALID')
+        x, l2  = conv_map(self.mod_conv7,    256, 1, 1, 'conv8_1')
+        self.ssd_conv8_1 = self.__with_loss(x, l2)
+        x, l2 = conv_map(self.ssd_conv8_1,  512, 3, 2, 'conv8_2')
+        self.ssd_conv8_2 = self.__with_loss(x, l2)
+        x, l2  = conv_map(self.ssd_conv8_2,  128, 1, 1, 'conv9_1')
+        self.ssd_conv9_1 = self.__with_loss(x, l2)
+        x, l2 = conv_map(self.ssd_conv9_1,  256, 3, 2, 'conv9_2')
+        self.ssd_conv9_2 = self.__with_loss(x, l2)
+        x, l2 = conv_map(self.ssd_conv9_2,  128, 1, 1, 'conv10_1')
+        self.ssd_conv10_1 = self.__with_loss(x, l2)
+        x, l2 = conv_map(self.ssd_conv10_1, 256, 3, 1, 'conv10_2', 'VALID')
+        self.ssd_conv10_2 = self.__with_loss(x, l2)
+        x, l2 = conv_map(self.ssd_conv10_2, 128, 1, 1, 'conv11_1')
+        self.ssd_conv11_1 = self.__with_loss(x, l2)
+        x, l2 = conv_map(self.ssd_conv11_1, 256, 3, 1, 'conv11_2', 'VALID')
+        self.ssd_conv11_2 = self.__with_loss(x, l2)
 
         if self.preset.num_maps < 7:
             return
 
-        self.ssd_conv12_1 = conv_map(self.ssd_conv11_2, 128, 1, 1, 'conv12_1')
-        self.ssd_conv12_2 = conv_map(self.ssd_conv12_1, 256, 3, 1, 'conv12_2', 'VALID')
+        x, l2 = conv_map(self.ssd_conv11_2, 128, 1, 1, 'conv12_1')
+        self.ssd_conv12_1 = self.__with_loss(x, l2)
+        x, l2 = conv_map(self.ssd_conv12_1, 256, 3, 1, 'conv12_2', 'VALID')
+        self.ssd_conv12_2 = self.__with_loss(x, l2)
 
     #---------------------------------------------------------------------------
     def __build_norms(self):
-        self.norm_conv4_3 = l2_normalization(self.vgg_conv4_3, 20, 512, 'norm_conv4_3')
+        x, l2 = l2_normalization(self.vgg_conv4_3, 20, 512, 'l2_norm_conv4_3')
+        self.norm_conv4_3 = self.__with_loss(x, l2)
 
     #---------------------------------------------------------------------------
     def __select_feature_maps(self):
@@ -312,12 +332,12 @@ class SSDVGG:
                 map_size = self.preset.map_sizes[i]
                 for j in range(5):
                     name    = 'classifier{}_{}'.format(i, j)
-                    clsfier = classifier(fmap, self.num_vars, map_size, name)
-                    self.__classifiers.append(clsfier)
+                    clsfier, l2 = classifier(fmap, self.num_vars, map_size, name)
+                    self.__classifiers.append(self.__with_loss(clsfier, l2))
                 if i < len(self.__maps)-1:
                     name    = 'classifier{}_{}'.format(i, 5)
-                    clsfier = classifier(fmap, self.num_vars, map_size, name)
-                    self.__classifiers.append(clsfier)
+                    clsfier, l2 = classifier(fmap, self.num_vars, map_size, name)
+                    self.__classifiers.append(self.__with_loss(clsfier, l2))
 
         with tf.variable_scope('output'):
             output      = tf.concat(self.__classifiers, axis=1, name='output')
@@ -507,7 +527,9 @@ class SSDVGG:
 
             # Final loss
             # Shape: scalar
-            loss = tf.reduce_mean(total_losses, name='loss')
+            loss = tf.add(tf.reduce_mean(total_losses),
+                          weight_decay*self.l2_loss,
+                          name='loss')
 
         #-----------------------------------------------------------------------
         # Build the optimizer
