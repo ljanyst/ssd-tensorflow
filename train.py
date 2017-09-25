@@ -57,6 +57,8 @@ def main():
                         help='checkpoint interval')
     parser.add_argument('--learning-rate', type=float, default=0.0005,
                         help='learning rate')
+    parser.add_argument('--continue-training', type=str2bool, default='False',
+                        help='continue training from the latest checkpoint')
     parser.add_argument('--num-workers', type=int, default=mp.cpu_count(),
                         help='number of parallel generators')
 
@@ -70,14 +72,55 @@ def main():
     print('[i] Tensorboard directory:', args.tensorboard_dir)
     print('[i] Checkpoint interval:  ', args.checkpoint_interval)
     print('[i] Learning rate:        ', args.learning_rate)
+    print('[i] Continue:             ', args.continue_training)
     print('[i] Number of workers:    ', args.num_workers)
 
-    try:
-        print('[i] Creating directory {}...'.format(args.name))
-        os.makedirs(args.name)
-    except (IOError) as e:
-        print('[!]', str(e))
-        return 1
+    #---------------------------------------------------------------------------
+    # Find an existing checkpoint
+    #---------------------------------------------------------------------------
+    start_epoch = 0
+    if args.continue_training:
+        state = tf.train.get_checkpoint_state(args.name)
+        ckpt_paths = state.all_model_checkpoint_paths
+        if state is None or len(ckpt_paths) == 0:
+            print('[!] No network state found in ' + args.name)
+            return 1
+
+        last_epoch = None
+        checkpoint_file = None
+        for ckpt in ckpt_paths:
+            ckpt_num = os.path.basename(ckpt).split('.')[0][1:]
+            try:
+                ckpt_num = int(ckpt_num)
+            except ValueError:
+                continue
+            if last_epoch is None or last_epoch < ckpt_num:
+                last_epoch = ckpt_num
+                checkpoint_file = ckpt
+
+        if checkpoint_file is None:
+            print('[!] No checkpoints found, cannot continue!')
+            return 1
+
+        metagraph_file = checkpoint_file + '.meta'
+
+        if not os.path.exists(metagraph_file):
+            print('[!] Cannot find metagraph', metagraph_file)
+            return 1
+        start_epoch = last_epoch
+
+    #---------------------------------------------------------------------------
+    # Create a project directory
+    #---------------------------------------------------------------------------
+    else:
+        try:
+            print('[i] Creating directory {}...'.format(args.name))
+            os.makedirs(args.name)
+        except (IOError) as e:
+            print('[!]', str(e))
+            return 1
+
+    print('[i] Starting at epoch:    ', start_epoch+1)
 
     #---------------------------------------------------------------------------
     # Configure the training data
@@ -99,16 +142,20 @@ def main():
     with tf.Session() as sess:
         print('[i] Creating the model...')
         net = SSDVGG(sess)
-        net.build_from_vgg(args.vgg_dir, td.num_classes, td.preset)
 
-        labels = tf.placeholder(tf.float32,
-                                shape=[None, None, td.num_classes+5])
+        if start_epoch != 0:
+            net.build_from_metagraph(metagraph_file, checkpoint_file)
+            net.build_optimizer_from_metagraph()
+        else:
+            net.build_from_vgg(args.vgg_dir, td.num_classes, td.preset)
+            net.build_optimizer(args.learning_rate)
 
-        optimizer, loss = net.get_optimizer(labels, args.learning_rate)
-
-        summary_writer  = tf.summary.FileWriter(args.tensorboard_dir,
-                                                sess.graph)
-        saver           = tf.train.Saver(max_to_keep=20)
+        #-----------------------------------------------------------------------
+        # Create various helpers
+        #-----------------------------------------------------------------------
+        summary_writer = tf.summary.FileWriter(args.tensorboard_dir,
+                                               sess.graph)
+        saver = tf.train.Saver(max_to_keep=20)
 
         n_train_batches = int(math.ceil(td.num_train/args.batch_size))
         initialize_uninitialized_variables(sess)
@@ -120,26 +167,36 @@ def main():
         #-----------------------------------------------------------------------
         # Summaries
         #-----------------------------------------------------------------------
-        validation_loss = tf.placeholder(tf.float32)
-        validation_loss_summary_op = tf.summary.scalar('validation_loss',
-                                                       validation_loss)
+        if start_epoch == 0:
+            restore = False
+            validation_loss = tf.placeholder(tf.float32, name='valid_loss_ph')
+            validation_loss_summary_op = tf.summary.scalar('validation_loss',
+                                                           validation_loss)
 
-        training_loss = tf.placeholder(tf.float32)
-        training_loss_summary_op = tf.summary.scalar('training_loss',
-                                                     training_loss)
+            training_loss = tf.placeholder(tf.float32, name='training_loss_ph')
+            training_loss_summary_op = tf.summary.scalar('training_loss',
+                                                         training_loss)
+
+        else:
+            restore = True
+            validation_loss = sess.graph.get_tensor_by_name('valid_loss_ph:0')
+            validation_loss_summary_op = sess.graph.get_tensor_by_name('validation_loss:0')
+            training_loss = sess.graph.get_tensor_by_name('training_loss_ph:0')
+            training_loss_summary_op = sess.graph.get_tensor_by_name('training_loss:0')
+
 
         training_ap = PrecisionSummary(sess, summary_writer, 'training',
-                                       td.lname2id.keys())
+                                       td.lname2id.keys(), restore)
         validation_ap = PrecisionSummary(sess, summary_writer, 'validation',
-                                         td.lname2id.keys())
+                                         td.lname2id.keys(), restore)
 
         training_imgs = ImageSummary(sess, summary_writer, 'training',
-                                     td.label_colors)
+                                     td.label_colors, restore)
         validation_imgs = ImageSummary(sess, summary_writer, 'validation',
-                                       td.label_colors)
+                                       td.label_colors, restore)
 
         print('[i] Training...')
-        for e in range(args.epochs):
+        for e in range(start_epoch, args.epochs):
             training_imgs_samples = []
             validation_imgs_samples = []
 
@@ -155,9 +212,10 @@ def main():
                 if len(training_imgs_samples) < 3:
                     saved_images = x[:3]
 
-                feed = {net.image_input:  x,
-                        labels:           y}
-                result, loss_batch, _ = sess.run([net.result, loss, optimizer],
+                feed = {net.image_input: x,
+                        net.labels: y}
+                result, loss_batch, _ = sess.run([net.result, net.loss,
+                                                  net.optimizer],
                                                  feed_dict=feed)
                 training_loss_total += loss_batch * x.shape[0]
 
@@ -178,9 +236,9 @@ def main():
             validation_loss_total = 0
 
             for x, y, gt_boxes in generator:
-                feed = {net.image_input:  x,
-                        labels:           y}
-                result, loss_batch = sess.run([net.result, loss],
+                feed = {net.image_input: x,
+                        net.labels: y}
+                result, loss_batch = sess.run([net.result, net.loss],
                                               feed_dict=feed)
                 validation_loss_total += loss_batch * x.shape[0]
 
