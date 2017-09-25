@@ -126,6 +126,17 @@ class SSDVGG:
         self.result      = sess.graph.get_tensor_by_name('result/result:0')
 
     #---------------------------------------------------------------------------
+    def build_optimizer_from_metagraph(self):
+        """
+        Get the optimizer and the loss from metagraph
+        """
+        sess = self.session
+        self.loss = sess.graph.get_tensor_by_name('total_loss/loss:0')
+        self.optimizer = sess.graph.get_operation_by_name('optimizer/minimizer')
+        self.labels = sess.graph.get_tensor_by_name('labels:0')
+        self.lr = sess.graph.get_tensor_by_name('lr:0')
+
+    #---------------------------------------------------------------------------
     def __download_vgg(self, vgg_dir, progress_hook):
         #-----------------------------------------------------------------------
         # Check if the model needs to be downloaded
@@ -314,18 +325,22 @@ class SSDVGG:
                                         axis=-1, name='result')
 
     #---------------------------------------------------------------------------
-    def get_optimizer(self, gt, learning_rate=0.0005):
+    def build_optimizer(self, weight_decay=0.0005, momentum=0.9):
+        self.labels = tf.placeholder(tf.float32, name='labels',
+                                    shape=[None, None, self.num_vars])
+        self.lr = tf.placeholder(tf.float32, name='lr')
+
         with tf.variable_scope('ground_truth'):
             #-------------------------------------------------------------------
             # Split the ground truth tensor
             #-------------------------------------------------------------------
             # Classification ground truth tensor
             # Shape: (batch_size, num_anchors, num_classes)
-            gt_cl = gt[:,:,:self.num_classes]
+            gt_cl = self.labels[:,:,:self.num_classes]
 
             # Localization ground truth tensor
             # Shape: (batch_size, num_anchors, 4)
-            gt_loc = gt[:,:,self.num_classes:]
+            gt_loc = self.labels[:,:,self.num_classes:]
 
             # Batch size
             # Shape: scalar
@@ -495,4 +510,6 @@ class SSDVGG:
         with tf.variable_scope('optimizer'):
             optimizer = tf.train.AdamOptimizer(learning_rate, name='optimizer')
             optimizer = optimizer.minimize(loss, name='minimizer')
-        return optimizer, loss
+
+        self.optimizer = optimizer
+        self.loss = loss
