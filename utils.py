@@ -136,20 +136,35 @@ def draw_box(img, box, color):
 #-------------------------------------------------------------------------------
 class PrecisionSummary:
     #---------------------------------------------------------------------------
-    def __init__(self, session, writer, sample_name, labels):
+    def __init__(self, session, writer, sample_name, labels, restore=False):
         self.session = session
         self.writer = writer
         self.labels = labels
-        self.mAP_placeholder = tf.placeholder(tf.float32)
-        self.mAP_summary_op = tf.summary.scalar(sample_name+'_mAP',
-                                                self.mAP_placeholder)
+
+        sess = session
+        ph_name = sample_name+'_mAP_ph'
+        sum_name = sample_name+'_mAP'
+
+        if restore:
+            self.mAP_placeholder = sess.graph.get_tensor_by_name(ph_name+':0')
+            self.mAP_summary_op = sess.graph.get_tensor_by_name(sum_name+':0')
+        else:
+            self.mAP_placeholder = tf.placeholder(tf.float32, name=ph_name)
+            self.mAP_summary_op = tf.summary.scalar(sum_name,
+                                                    self.mAP_placeholder)
+
         self.placeholders = {}
         self.summary_ops = {}
 
         for label in labels:
-            summary_name = sample_name+'_AP_'+label
-            placeholder = tf.placeholder(tf.float32)
-            summary_op = tf.summary.scalar(summary_name, placeholder)
+            sum_name = sample_name+'_AP_'+label
+            ph_name = sample_name+'_AP_ph_'+label
+            if restore:
+                placeholder = sess.graph.get_tensor_by_name(ph_name+':0')
+                summary_op = sess.graph.get_tensor_by_name(sum_name+':0')
+            else:
+                placeholder = tf.placeholder(tf.float32, name=ph_name)
+                summary_op = tf.summary.scalar(sum_name, placeholder)
             self.placeholders[label] = placeholder
             self.summary_ops[label] = summary_op
 
@@ -169,14 +184,22 @@ class PrecisionSummary:
 #-------------------------------------------------------------------------------
 class ImageSummary:
     #---------------------------------------------------------------------------
-    def __init__(self, session, writer, sample_name, colors):
+    def __init__(self, session, writer, sample_name, colors, restore=False):
         self.session = session
         self.writer = writer
         self.colors = colors
-        self.img_placeholder = tf.placeholder(tf.float32,
-                                              shape=[None, None, None, 3])
-        self.img_summary_op = tf.summary.image(sample_name+'_img',
-                                               self.img_placeholder)
+
+        sess = session
+        sum_name = sample_name+'_img'
+        ph_name = sample_name+'_img_ph'
+        if restore:
+            self.img_placeholder = sess.graph.get_tensor_by_name(ph_name+':0')
+            self.img_summary_op = sess.graph.get_tensor_by_name(sum_name+':0')
+        else:
+            self.img_placeholder = tf.placeholder(tf.float32, name=ph_name,
+                                                  shape=[None, None, None, 3])
+            self.img_summary_op = tf.summary.image(sum_name,
+                                                   self.img_placeholder)
 
     #---------------------------------------------------------------------------
     def push(self, epoch, samples):
