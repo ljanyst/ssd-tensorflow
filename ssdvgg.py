@@ -190,6 +190,13 @@ class SSDVGG:
         self.vgg_fc7_w   = sess.graph.get_tensor_by_name('fc7/weights:0')
         self.vgg_fc7_b   = sess.graph.get_tensor_by_name('fc7/biases:0')
 
+        layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', 'conv3_1',
+                  'conv3_2', 'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3',
+                  'conv5_1', 'conv5_2', 'conv5_3']
+
+        for l in layers:
+            self.l2_loss += sess.graph.get_tensor_by_name(l+'/L2Loss:0')
+
     #---------------------------------------------------------------------------
     def __build_vgg_mods(self):
         self.mod_pool5 = tf.nn.max_pool(self.vgg_conv5_3, ksize=[1, 3, 3, 1],
@@ -201,6 +208,7 @@ class SSDVGG:
                              strides=[1, 1, 1, 1], padding='SAME')
             x = tf.nn.bias_add(x, self.vgg_fc6_b)
             self.mod_conv6 = tf.nn.relu(x)
+            self.l2_loss += tf.nn.l2_loss(self.vgg_fc6_w)
 
         with tf.variable_scope('mod_conv7'):
             x = tf.nn.conv2d(self.mod_conv6, self.vgg_fc7_w,
@@ -209,6 +217,7 @@ class SSDVGG:
             x = tf.nn.relu(x)
             x = tf.stop_gradient(x)
             self.mod_conv7 = x
+            self.l2_loss += tf.nn.l2_loss(self.vgg_fc7_w)
 
     #---------------------------------------------------------------------------
     def __build_vgg_mods_a_trous(self):
@@ -243,6 +252,7 @@ class SSDVGG:
             x = tf.nn.atrous_conv2d(self.mod_pool5, w, rate=3, padding='SAME')
             x = tf.nn.bias_add(x, b)
             self.mod_conv6 = tf.nn.relu(x)
+            self.l2_loss += tf.nn.l2_loss(w)
 
         #-----------------------------------------------------------------------
         # Modified conv7
@@ -271,6 +281,7 @@ class SSDVGG:
             x = tf.nn.relu(x)
             x = tf.stop_gradient(x)
             self.mod_conv7 = x
+            self.l2_loss += tf.nn.l2_loss(w)
 
     #---------------------------------------------------------------------------
     def __with_loss(self, x, l2_loss):
