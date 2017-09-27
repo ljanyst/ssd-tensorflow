@@ -48,7 +48,7 @@ def conv_map(x, size, shape, stride, name, padding='SAME'):
         x = tf.nn.conv2d(x, w, strides=[1, stride, stride, 1], padding=padding)
         x = tf.nn.bias_add(x, b)
         x = tf.nn.relu(x)
-        l2 = tf.nn.l2_loss(w) + tf.nn.l2_loss(b)
+        l2 = tf.nn.l2_loss(w)
     return x, l2
 
 #-------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ def classifier(x, size, mapsize, name):
         x = tf.nn.conv2d(x, w, strides=[1, 1, 1, 1], padding='SAME')
         x = tf.nn.bias_add(x, b)
         x = tf.reshape(x, [-1, mapsize.w*mapsize.h, size])
-        l2 = tf.nn.l2_loss(w) + tf.nn.l2_loss(b)
+        l2 = tf.nn.l2_loss(w)
     return x, l2
 
 #-------------------------------------------------------------------------------
@@ -81,8 +81,7 @@ def l2_normalization(x, initial_scale, channels, name):
     with tf.variable_scope(name):
         scale = array2tensor(initial_scale*np.ones(channels), 'scale')
         x = scale*tf.nn.l2_normalize(x, dim=-1)
-        l2 = tf.nn.l2_loss(scale)
-    return x, l2
+    return x
 
 #-------------------------------------------------------------------------------
 class SSDVGG:
@@ -307,8 +306,8 @@ class SSDVGG:
 
     #---------------------------------------------------------------------------
     def __build_norms(self):
-        x, l2 = l2_normalization(self.vgg_conv4_3, 20, 512, 'l2_norm_conv4_3')
-        self.norm_conv4_3 = self.__with_loss(x, l2)
+        x = l2_normalization(self.vgg_conv4_3, 20, 512, 'l2_norm_conv4_3')
+        self.norm_conv4_3 = x
 
     #---------------------------------------------------------------------------
     def __select_feature_maps(self):
