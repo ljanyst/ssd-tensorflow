@@ -137,7 +137,6 @@ class SSDVGG:
         self.loss = sess.graph.get_tensor_by_name('total_loss/loss:0')
         self.optimizer = sess.graph.get_operation_by_name('optimizer/minimizer')
         self.labels = sess.graph.get_tensor_by_name('labels:0')
-        self.lr = sess.graph.get_tensor_by_name('lr:0')
 
     #---------------------------------------------------------------------------
     def __download_vgg(self, vgg_dir, progress_hook):
@@ -357,10 +356,9 @@ class SSDVGG:
                                         axis=-1, name='result')
 
     #---------------------------------------------------------------------------
-    def build_optimizer(self, weight_decay=0.0005, momentum=0.9):
+    def build_optimizer(self, learning_rate=0.0001, weight_decay=0.0005):
         self.labels = tf.placeholder(tf.float32, name='labels',
                                     shape=[None, None, self.num_vars])
-        self.lr = tf.placeholder(tf.float32, name='lr')
 
         with tf.variable_scope('ground_truth'):
             #-------------------------------------------------------------------
@@ -542,7 +540,7 @@ class SSDVGG:
         # Build the optimizer
         #-----------------------------------------------------------------------
         with tf.variable_scope('optimizer'):
-            optimizer = tf.train.AdamOptimizer(learning_rate, name='optimizer')
+            optimizer = tf.train.AdamOptimizer(learning_rate)
             optimizer = optimizer.minimize(loss, name='minimizer')
 
         self.optimizer = optimizer
