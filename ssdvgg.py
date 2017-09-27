@@ -182,8 +182,7 @@ class SSDVGG:
         graph = tf.saved_model.loader.load(sess, ['vgg16'], vgg_dir+'/vgg')
         self.image_input = sess.graph.get_tensor_by_name('image_input:0')
         self.keep_prob   = sess.graph.get_tensor_by_name('keep_prob:0')
-        vgg_conv4_3 = sess.graph.get_tensor_by_name('conv4_3/Relu:0')
-        self.vgg_conv4_3 = tf.stop_gradient(vgg_conv4_3)
+        self.vgg_conv4_3 = sess.graph.get_tensor_by_name('conv4_3/Relu:0')
         self.vgg_conv5_3 = sess.graph.get_tensor_by_name('conv5_3/Relu:0')
         self.vgg_fc6_w   = sess.graph.get_tensor_by_name('fc6/weights:0')
         self.vgg_fc6_b   = sess.graph.get_tensor_by_name('fc6/biases:0')
@@ -215,7 +214,6 @@ class SSDVGG:
                              strides=[1, 1, 1, 1], padding='SAME')
             x = tf.nn.bias_add(x, self.vgg_fc7_b)
             x = tf.nn.relu(x)
-            x = tf.stop_gradient(x)
             self.mod_conv7 = x
             self.l2_loss += tf.nn.l2_loss(self.vgg_fc7_w)
 
@@ -279,7 +277,6 @@ class SSDVGG:
                              padding='SAME')
             x = tf.nn.bias_add(x, b)
             x = tf.nn.relu(x)
-            x = tf.stop_gradient(x)
             self.mod_conv7 = x
             self.l2_loss += tf.nn.l2_loss(w)
 
