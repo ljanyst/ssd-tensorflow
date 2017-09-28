@@ -356,7 +356,8 @@ class SSDVGG:
                                         axis=-1, name='result')
 
     #---------------------------------------------------------------------------
-    def build_optimizer(self, learning_rate=0.0001, weight_decay=0.0005):
+    def build_optimizer(self, learning_rate=0.0005, global_step = None,
+                        weight_decay=0.0005, momentum=0.9):
         self.labels = tf.placeholder(tf.float32, name='labels',
                                     shape=[None, None, self.num_vars])
 
@@ -540,8 +541,9 @@ class SSDVGG:
         # Build the optimizer
         #-----------------------------------------------------------------------
         with tf.variable_scope('optimizer'):
-            optimizer = tf.train.AdamOptimizer(learning_rate)
-            optimizer = optimizer.minimize(loss, name='minimizer')
+            optimizer = tf.train.MomentumOptimizer(learning_rate, momentum)
+            optimizer = optimizer.minimize(loss, name='minimizer',
+                                           global_step=global_step)
 
         self.optimizer = optimizer
         self.loss = loss
