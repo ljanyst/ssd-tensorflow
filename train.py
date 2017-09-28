@@ -36,6 +36,24 @@ from utils import *
 from tqdm import tqdm
 
 #-------------------------------------------------------------------------------
+def compute_lr(initial_lr, lr_drop, num_batches):
+    lr_drop = lr_drop.split(',')
+    lr_drop = [x.split(':') for x in lr_drop]
+    lr_drop = [(int(x), float(y)) for x, y in lr_drop]
+
+    values = [initial_lr]
+    boundaries = []
+    for drop in lr_drop:
+        boundaries.append(drop[0]*num_batches)
+        values.append(drop[1])
+
+    with tf.variable_scope('learning_rate'):
+        global_step = tf.Variable(0, trainable=False, name='global_step')
+        lr = tf.train.piecewise_constant(global_step, boundaries, values)
+
+    return lr, global_step
+
+#-------------------------------------------------------------------------------
 def main():
     #---------------------------------------------------------------------------
     # Parse the commandline
@@ -55,8 +73,10 @@ def main():
                         help='name of the tensorboard data directory')
     parser.add_argument('--checkpoint-interval', type=int, default=50,
                         help='checkpoint interval')
-    parser.add_argument('--learning-rate', type=float, default=0.0001,
+    parser.add_argument('--learning-rate', type=float, default=0.0005,
                         help='learning rate')
+    parser.add_argument('--lr-drop', default="120:0.0001,150:0.00001",
+                        help='learning rate drops: epoch1:new_lr1,epoch2:new_lr2')
     parser.add_argument('--continue-training', type=str2bool, default='False',
                         help='continue training from the latest checkpoint')
     parser.add_argument('--num-workers', type=int, default=mp.cpu_count(),
@@ -72,6 +92,7 @@ def main():
     print('[i] Tensorboard directory:', args.tensorboard_dir)
     print('[i] Checkpoint interval:  ', args.checkpoint_interval)
     print('[i] Learning rate:        ', args.learning_rate)
+    print('[i] Learning rate drop:   ', args.lr_drop)
     print('[i] Continue:             ', args.continue_training)
     print('[i] Number of workers:    ', args.num_workers)
 
@@ -141,14 +162,21 @@ def main():
     #---------------------------------------------------------------------------
     with tf.Session() as sess:
         print('[i] Creating the model...')
-        net = SSDVGG(sess)
+        n_train_batches = int(math.ceil(td.num_train/args.batch_size))
 
+        learning_rate = args.learning_rate
+        global_step = None
+        if args.lr_drop and start_epoch == 0:
+            ret = compute_lr(args.learning_rate, args.lr_drop,  n_train_batches)
+            learning_rate, global_step = ret
+
+        net = SSDVGG(sess)
         if start_epoch != 0:
             net.build_from_metagraph(metagraph_file, checkpoint_file)
             net.build_optimizer_from_metagraph()
         else:
             net.build_from_vgg(args.vgg_dir, td.num_classes, td.preset)
-            net.build_optimizer(args.learning_rate)
+            net.build_optimizer(learning_rate, global_step)
 
         #-----------------------------------------------------------------------
         # Create various helpers
@@ -157,7 +185,6 @@ def main():
                                                sess.graph)
         saver = tf.train.Saver(max_to_keep=20)
 
-        n_train_batches = int(math.ceil(td.num_train/args.batch_size))
         initialize_uninitialized_variables(sess)
 
         anchors = get_anchors_for_preset(td.preset)
