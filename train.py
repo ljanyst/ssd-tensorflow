@@ -73,9 +73,9 @@ def main():
                         help='name of the tensorboard data directory')
     parser.add_argument('--checkpoint-interval', type=int, default=50,
                         help='checkpoint interval')
-    parser.add_argument('--learning-rate', type=float, default=0.0005,
+    parser.add_argument('--learning-rate', type=float, default=0.001,
                         help='learning rate')
-    parser.add_argument('--lr-drop', default="120:0.0001,150:0.00001",
+    parser.add_argument('--lr-drop', default="95:0.0001,120:0.00001",
                         help='learning rate drops: epoch1:new_lr1,epoch2:new_lr2')
     parser.add_argument('--continue-training', type=str2bool, default='False',
                         help='continue training from the latest checkpoint')
