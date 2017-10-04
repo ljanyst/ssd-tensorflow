@@ -548,3 +548,44 @@ class SSDVGG:
 
         self.optimizer = optimizer
         self.loss = loss
+
+    #---------------------------------------------------------------------------
+    def build_summaries(self):
+        #-----------------------------------------------------------------------
+        # Get all the scopes with filters
+        #-----------------------------------------------------------------------
+        names = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', 'conv3_1',
+                 'conv3_2', 'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3',
+                 'conv5_1', 'conv5_2', 'conv5_3', 'mod_conv6', 'mod_conv7',
+                 'conv8_1', 'conv8_2', 'conv9_1', 'conv9_2', 'conv10_1',
+                 'conv10_2', 'conv11_1', 'conv11_2']
+
+        if self.preset.num_maps == 7:
+            names += ['conv12_1', 'conv12_2']
+
+        for i in range(len(self.__maps)):
+            for j in range(5):
+                names.append('classifiers/classifier{}_{}'.format(i, j))
+            if i < len(self.__maps)-1:
+                names.append('classifiers/classifier{}_{}'.format(i, 5))
+
+        #-----------------------------------------------------------------------
+        # Build the filter summaries
+        #-----------------------------------------------------------------------
+        sess = self.session
+        with tf.variable_scope('filter_summaries'):
+            summaries = []
+            for name in names:
+                tensor = sess.graph.get_tensor_by_name(name+'/filter:0')
+                summary = tf.summary.histogram(name, tensor)
+                summaries.append(summary)
+
+        #-----------------------------------------------------------------------
+        # Scale summary
+        #-----------------------------------------------------------------------
+        with tf.variable_scope('scale_summary'):
+            tensor = sess.graph.get_tensor_by_name('l2_norm_conv4_3/scale:0')
+            summary = tf.summary.histogram('l2_norm_conv4_3', tensor)
+            summaries.append(summary)
+
+        return tf.summary.merge(summaries)
