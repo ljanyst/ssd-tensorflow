@@ -41,7 +41,7 @@ class DLProgress(tqdm):
 #-------------------------------------------------------------------------------
 def conv_map(x, size, shape, stride, name, padding='SAME'):
     with tf.variable_scope(name):
-        w = tf.get_variable("weights",
+        w = tf.get_variable("filter",
                             shape=[shape, shape, x.get_shape()[3], size],
                             initializer=tf.contrib.layers.xavier_initializer())
         b = tf.Variable(tf.zeros(size), name='biases')
@@ -54,7 +54,7 @@ def conv_map(x, size, shape, stride, name, padding='SAME'):
 #-------------------------------------------------------------------------------
 def classifier(x, size, mapsize, name):
     with tf.variable_scope(name):
-        w = tf.get_variable("weights",
+        w = tf.get_variable("filter",
                             shape=[3, 3, x.get_shape()[3], size],
                             initializer=tf.contrib.layers.xavier_initializer())
         b = tf.Variable(tf.zeros(size), name='biases')
@@ -244,11 +244,12 @@ class SSDVGG:
             #-------------------------------------------------------------------
             # Build the feature map
             #-------------------------------------------------------------------
-            w = array2tensor(mod_w, 'weights')
+            w = array2tensor(mod_w, 'filter')
             b = array2tensor(mod_b, 'biases')
             x = tf.nn.atrous_conv2d(self.mod_pool5, w, rate=3, padding='SAME')
             x = tf.nn.bias_add(x, b)
-            self.mod_conv6 = tf.nn.relu(x)
+            x = tf.nn.relu(x)
+            self.mod_conv6 = x
             self.l2_loss += tf.nn.l2_loss(w)
 
         #-----------------------------------------------------------------------
@@ -270,7 +271,7 @@ class SSDVGG:
             #-------------------------------------------------------------------
             # Build the feature map
             #-------------------------------------------------------------------
-            w = array2tensor(mod_w, 'weights')
+            w = array2tensor(mod_w, 'filter')
             b = array2tensor(mod_b, 'biases')
             x = tf.nn.conv2d(self.mod_conv6, w, strides=[1, 1, 1, 1],
                              padding='SAME')
