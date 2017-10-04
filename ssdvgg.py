@@ -396,6 +396,12 @@ class SSDVGG:
             # Shape: (batch_size)
             positives_num = total_num-negatives_num
 
+            # Number of positives per sample that is division-safe
+            # Shape: (batch_size)
+            positives_num_safe = tf.where(tf.equal(positives_num, 0),
+                                          tf.ones([batch_size])*10e-15,
+                                          tf.to_float(positives_num))
+
         #-----------------------------------------------------------------------
         # Compute masks
         #-----------------------------------------------------------------------
@@ -485,6 +491,19 @@ class SSDVGG:
             # Shape: (batch_size)
             confidence_loss = tf.add(positives_sum, negatives_max_sum)
 
+            # Total confidence loss normalized by the number of positives
+            # per sample
+            # Shape: (batch_size)
+            confidence_loss = tf.where(tf.equal(positives_num, 0),
+                                       tf.zeros([batch_size]),
+                                       tf.div(confidence_loss,
+                                              positives_num_safe))
+
+            # Mean confidence loss for the batch
+            # Shape: scalar
+            self.confidence_loss = tf.reduce_mean(confidence_loss,
+                                                  name='confidence_loss')
+
         #-----------------------------------------------------------------------
         # Compute the localization loss
         #-----------------------------------------------------------------------
@@ -511,43 +530,57 @@ class SSDVGG:
             # Shape: (batch_size)
             localization_loss = tf.reduce_sum(positive_locs, axis=-1)
 
+            # Total localization loss normalized by the number of positives
+            # per sample
+            # Shape: (batch_size)
+            localization_loss = tf.where(tf.equal(positives_num, 0),
+                                         tf.zeros([batch_size]),
+                                         tf.div(localization_loss,
+                                                positives_num_safe))
+
+            # Mean localization loss for the batch
+            # Shape: scalar
+            self.localization_loss = tf.reduce_mean(localization_loss,
+                                                    name='localization_loss')
+
         #-----------------------------------------------------------------------
         # Compute total loss
         #-----------------------------------------------------------------------
         with tf.variable_scope('total_loss'):
             # Sum of the localization and confidence loss
             # Shape: (batch_size)
-            sum_losses = tf.add(confidence_loss, localization_loss)
+            self.conf_and_loc_loss = tf.add(self.confidence_loss,
+                                            self.localization_loss,
+                                            name='sum_losses')
 
-            # Number of positives per sample that is division-safe
-            # Shape: (batch_size)
-            positives_num_safe = tf.where(tf.equal(positives_num, 0),
-                                          tf.ones([batch_size])*10e-15,
-                                          tf.to_float(positives_num))
-
-            # Total loss per sample - sum of losses divided by the number of
-            # positives
-            # Shape: (batch_size)
-            total_losses = tf.where(tf.less(positives_num, 1),
-                                    tf.zeros([batch_size]),
-                                    tf.div(sum_losses, positives_num_safe))
+            # L2 loss
+            # Shape: scalar
+            self.l2_loss = tf.multiply(weight_decay, self.l2_loss,
+                                       name='l2_loss')
 
             # Final loss
             # Shape: scalar
-            loss = tf.add(tf.reduce_mean(total_losses),
-                          weight_decay*self.l2_loss,
-                          name='loss')
+            self.loss = tf.add(self.conf_and_loc_loss, self.l2_loss,
+                               name='loss')
 
         #-----------------------------------------------------------------------
         # Build the optimizer
         #-----------------------------------------------------------------------
         with tf.variable_scope('optimizer'):
             optimizer = tf.train.MomentumOptimizer(learning_rate, momentum)
-            optimizer = optimizer.minimize(loss, name='minimizer',
+            optimizer = optimizer.minimize(self.loss, name='minimizer',
                                            global_step=global_step)
 
+        #-----------------------------------------------------------------------
+        # Store the tensors
+        #-----------------------------------------------------------------------
         self.optimizer = optimizer
-        self.loss = loss
+        self.losses = {
+            'total': self.loss,
+            'localization': self.localization_loss,
+            'confidence': self.confidence_loss,
+            'l2': self.l2_loss
+        }
 
     #---------------------------------------------------------------------------
     def build_summaries(self):
