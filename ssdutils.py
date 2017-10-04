@@ -166,7 +166,8 @@ def compute_overlap(box_arr, anchors_arr, threshold):
     best = None
     good = []
 
-    best = Score(best_idx, iou[best_idx])
+    if iou[best_idx] > threshold:
+        best = Score(best_idx, iou[best_idx])
 
     for idx in good_idxs:
         good.append(Score(idx, iou[idx]))
