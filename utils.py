@@ -19,6 +19,7 @@
 #-------------------------------------------------------------------------------
 
 import argparse
+import math
 import cv2
 
 import tensorflow as tf
@@ -107,7 +108,17 @@ def prop2abs(center, size, imgsize):
     return int(cx-width2), int(cx+width2), int(cy-height2), int(cy+height2)
 
 #-------------------------------------------------------------------------------
+def box_is_valid(box):
+    for x in [box.center.x, box.center.y, box.size.w, box.size.h]:
+        if math.isnan(x) or math.isinf(x):
+            return False
+    return True
+
+#-------------------------------------------------------------------------------
 def normalize_box(box):
+    if not box_is_valid(box):
+        return box
+
     img_size = Size(1000, 1000)
     xmin, xmax, ymin, ymax = prop2abs(box.center, box.size, img_size)
     xmin = max(xmin, 0)
