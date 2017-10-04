@@ -102,8 +102,12 @@ def main():
     start_epoch = 0
     if args.continue_training:
         state = tf.train.get_checkpoint_state(args.name)
+        if state is None:
+            print('[!] No network state found in ' + args.name)
+            return 1
+
         ckpt_paths = state.all_model_checkpoint_paths
-        if state is None or len(ckpt_paths) == 0:
+        if not ckpt_paths:
             print('[!] No network state found in ' + args.name)
             return 1
 
