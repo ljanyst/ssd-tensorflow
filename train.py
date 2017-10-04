@@ -288,19 +288,19 @@ def main():
                                      training_loss_summary_op],
                                     feed_dict=feed)
 
-            summary_writer.add_summary(loss_summary[0], e)
-            summary_writer.add_summary(loss_summary[1], e)
+            summary_writer.add_summary(loss_summary[0], e+1)
+            summary_writer.add_summary(loss_summary[1], e+1)
 
             #-------------------------------------------------------------------
             # Compute and write the average precision
             #-------------------------------------------------------------------
             APs = training_ap_calc.compute_aps()
             mAP = APs2mAP(APs)
-            training_ap.push(e, mAP, APs)
+            training_ap.push(e+1, mAP, APs)
 
             APs = validation_ap_calc.compute_aps()
             mAP = APs2mAP(APs)
-            validation_ap.push(e, mAP, APs)
+            validation_ap.push(e+1, mAP, APs)
 
             training_ap_calc.clear()
             validation_ap_calc.clear()
@@ -308,8 +308,8 @@ def main():
             #-------------------------------------------------------------------
             # Push the image summaries
             #-------------------------------------------------------------------
-            training_imgs.push(e, training_imgs_samples)
-            validation_imgs.push(e, validation_imgs_samples)
+            training_imgs.push(e+1, training_imgs_samples)
+            validation_imgs.push(e+1, validation_imgs_samples)
 
             summary_writer.flush()
 
