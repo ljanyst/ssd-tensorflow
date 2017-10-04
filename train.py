@@ -198,23 +198,7 @@ def main():
         #-----------------------------------------------------------------------
         # Summaries
         #-----------------------------------------------------------------------
-        if start_epoch == 0:
-            restore = False
-            validation_loss = tf.placeholder(tf.float32, name='valid_loss_ph')
-            validation_loss_summary_op = tf.summary.scalar('validation_loss',
-                                                           validation_loss)
-
-            training_loss = tf.placeholder(tf.float32, name='training_loss_ph')
-            training_loss_summary_op = tf.summary.scalar('training_loss',
-                                                         training_loss)
-
-        else:
-            restore = True
-            validation_loss = sess.graph.get_tensor_by_name('valid_loss_ph:0')
-            validation_loss_summary_op = sess.graph.get_tensor_by_name('validation_loss:0')
-            training_loss = sess.graph.get_tensor_by_name('training_loss_ph:0')
-            training_loss_summary_op = sess.graph.get_tensor_by_name('training_loss:0')
-
+        restore = start_epoch != 0
 
         training_ap = PrecisionSummary(sess, summary_writer, 'training',
                                        td.lname2id.keys(), restore)
@@ -225,6 +209,11 @@ def main():
                                      td.label_colors, restore)
         validation_imgs = ImageSummary(sess, summary_writer, 'validation',
                                        td.label_colors, restore)
+
+        training_loss = LossSummary(sess, summary_writer, 'training',
+                                    td.num_train, restore)
+        validation_loss = LossSummary(sess, summary_writer, 'validation',
+                                      td.num_valid, restore)
 
         #-----------------------------------------------------------------------
         # Get the initial snapshot of the network
@@ -248,7 +237,6 @@ def main():
             #-------------------------------------------------------------------
             generator = td.train_generator(args.batch_size, args.num_workers)
             description = '[i] Epoch {:>2}/{}'.format(e+1, args.epochs)
-            training_loss_total = 0
             for x, y, gt_boxes in tqdm(generator, total=n_train_batches,
                                        desc=description, unit='batches'):
 
@@ -257,10 +245,11 @@ def main():
 
                 feed = {net.image_input: x,
                         net.labels: y}
-                result, loss_batch, _ = sess.run([net.result, net.loss,
+                result, loss_batch, _ = sess.run([net.result, net.losses,
                                                   net.optimizer],
                                                  feed_dict=feed)
-                training_loss_total += loss_batch * x.shape[0]
+
+                training_loss.add(loss_batch, x.shape[0])
 
                 for i in range(result.shape[0]):
                     boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
@@ -270,20 +259,18 @@ def main():
                     if len(training_imgs_samples) < 3:
                         training_imgs_samples.append((saved_images[i], boxes))
 
-            training_loss_total /= td.num_train
-
             #-------------------------------------------------------------------
             # Validate
             #-------------------------------------------------------------------
             generator = td.valid_generator(args.batch_size)
-            validation_loss_total = 0
 
             for x, y, gt_boxes in generator:
                 feed = {net.image_input: x,
                         net.labels: y}
-                result, loss_batch = sess.run([net.result, net.loss],
+                result, loss_batch = sess.run([net.result, net.losses],
                                               feed_dict=feed)
-                validation_loss_total += loss_batch * x.shape[0]
+
+                validation_loss.add(loss_batch,  x.shape[0])
 
                 for i in range(result.shape[0]):
                     boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
@@ -293,29 +280,15 @@ def main():
                     if len(validation_imgs_samples) < 3:
                         validation_imgs_samples.append((np.copy(x[i]), boxes))
 
-            validation_loss_total /= td.num_valid
+            #-------------------------------------------------------------------
+            # Write summaries
+            #-------------------------------------------------------------------
+            training_loss.push(e+1)
+            validation_loss.push(e+1)
 
-            #-------------------------------------------------------------------
-            # Write loss summary
-            #-------------------------------------------------------------------
-            feed = {validation_loss: validation_loss_total,
-                    training_loss:   training_loss_total}
-            loss_summary = sess.run([validation_loss_summary_op,
-                                     training_loss_summary_op],
-                                    feed_dict=feed)
-
-            summary_writer.add_summary(loss_summary[0], e+1)
-            summary_writer.add_summary(loss_summary[1], e+1)
-
-            #-------------------------------------------------------------------
-            # Write net summaries
-            #-------------------------------------------------------------------
             net_summary = sess.run(net_summary_ops)
             summary_writer.add_summary(net_summary, e+1)
 
-            #-------------------------------------------------------------------
-            # Compute and write the average precision
-            #-------------------------------------------------------------------
             APs = training_ap_calc.compute_aps()
             mAP = APs2mAP(APs)
             training_ap.push(e+1, mAP, APs)
@@ -327,9 +300,6 @@ def main():
             training_ap_calc.clear()
             validation_ap_calc.clear()
 
-            #-------------------------------------------------------------------
-            # Push the image summaries
-            #-------------------------------------------------------------------
             training_imgs.push(e+1, training_imgs_samples)
             validation_imgs.push(e+1, validation_imgs_samples)
 
