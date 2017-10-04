@@ -311,11 +311,11 @@ def main():
             if (e+1) % args.checkpoint_interval == 0:
                 checkpoint = '{}/e{}.ckpt'.format(args.name, e+1)
                 saver.save(sess, checkpoint)
-                print('Checkpoint saved:', checkpoint)
+                print('[i] Checkpoint saved:', checkpoint)
 
         checkpoint = '{}/final.ckpt'.format(args.name)
         saver.save(sess, checkpoint)
-        print('Checkpoint saved:', checkpoint)
+        print('[i] Checkpoint saved:', checkpoint)
 
     return 0
 
