@@ -226,6 +226,18 @@ def main():
         validation_imgs = ImageSummary(sess, summary_writer, 'validation',
                                        td.label_colors, restore)
 
+        #-----------------------------------------------------------------------
+        # Get the initial snapshot of the network
+        #-----------------------------------------------------------------------
+        net_summary_ops = net.build_summaries()
+        if start_epoch == 0:
+            net_summary = sess.run(net_summary_ops)
+            summary_writer.add_summary(net_summary, 0)
+        summary_writer.flush()
+
+        #-----------------------------------------------------------------------
+        # Cycle through the epoch
+        #-----------------------------------------------------------------------
         print('[i] Training...')
         for e in range(start_epoch, args.epochs):
             training_imgs_samples = []
@@ -294,6 +306,12 @@ def main():
 
             summary_writer.add_summary(loss_summary[0], e+1)
             summary_writer.add_summary(loss_summary[1], e+1)
+
+            #-------------------------------------------------------------------
+            # Write net summaries
+            #-------------------------------------------------------------------
+            net_summary = sess.run(net_summary_ops)
+            summary_writer.add_summary(net_summary, e+1)
 
             #-------------------------------------------------------------------
             # Compute and write the average precision
