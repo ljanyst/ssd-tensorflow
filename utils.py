@@ -226,3 +226,53 @@ class ImageSummary:
         feed = {self.img_placeholder: imgs}
         summary = self.session.run(self.img_summary_op, feed_dict=feed)
         self.writer.add_summary(summary, epoch)
+
+#-------------------------------------------------------------------------------
+class LossSummary:
+    #---------------------------------------------------------------------------
+    def __init__(self, session, writer, sample_name, num_samples,
+                 restore=False):
+        self.session = session
+        self.writer = writer
+        self.num_samples = num_samples
+        self.loss_names = ['total', 'localization', 'confidence', 'l2']
+        self.loss_values = {}
+        self.placeholders = {}
+
+        sess = session
+
+        summary_ops = []
+        for loss in self.loss_names:
+            sum_name = sample_name+'_'+loss+'_loss'
+            ph_name = sample_name+'_'+loss+'_loss_ph'
+
+            if restore:
+                placeholder = sess.graph.get_tensor_by_name(ph_name+':0')
+                summary_op = sess.graph.get_tensor_by_name(sum_name+':0')
+            else:
+                placeholder = tf.placeholder(tf.float32, name=ph_name)
+                summary_op = tf.summary.scalar(sum_name, placeholder)
+
+            self.loss_values[loss] = float(0)
+            self.placeholders[loss] = placeholder
+            summary_ops.append(summary_op)
+
+        self.summary_ops = tf.summary.merge(summary_ops)
+
+    #---------------------------------------------------------------------------
+    def add(self, values, num_samples):
+        for loss in self.loss_names:
+            self.loss_values[loss] += values[loss]*num_samples
+
+    #---------------------------------------------------------------------------
+    def push(self, epoch):
+        feed = {}
+        for loss in self.loss_names:
+            feed[self.placeholders[loss]] = \
+                self.loss_values[loss]/self.num_samples
+
+        summary = self.session.run(self.summary_ops, feed_dict=feed)
+        self.writer.add_summary(summary, epoch)
+
+        for loss in self.loss_names:
+            self.loss_values[loss] = float(0)
