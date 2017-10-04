@@ -59,7 +59,7 @@ label_defs = [
 #-------------------------------------------------------------------------------
 class PascalVOCSource:
     #---------------------------------------------------------------------------
-    def __init__(self, vocids=['VOC2007', 'VOC2012']):
+    def __init__(self):
         self.num_classes   = len(label_defs)
         self.colors        = {l.name: l.color for l in label_defs}
         self.lid2name      = {i: l.name for i, l in enumerate(label_defs)}
@@ -70,7 +70,6 @@ class PascalVOCSource:
         self.train_samples = []
         self.valid_samples = []
         self.test_samples  = []
-        self.vocids        = vocids
 
     #---------------------------------------------------------------------------
     def __build_sample_list(self, root, dataset_name):
@@ -143,11 +142,14 @@ class PascalVOCSource:
         """
 
         trainval_samples = []
-        for vocid in self.vocids:
+        for vocid in ['VOC2007', 'VOC2012']:
             trainval_root = data_dir + '/trainval/VOCdevkit/'+vocid
             trainval_name = 'trainval_'+vocid
             trainval_samples += self.__build_sample_list(trainval_root,
                                                          trainval_name)
+        test_root = data_dir + '/test/VOCdevkit/VOC2007'
+        trainval_samples  += self.__build_sample_list(test_root, 'test_VOC2007')
+
         random.shuffle(trainval_samples)
         tvlen              = len(trainval_samples)
         self.valid_samples = trainval_samples[:int(valid_fraction*tvlen)]
@@ -167,8 +169,8 @@ class PascalVOCSource:
         Load the test data
         :param data_dir: the directory where the dataset's file are stored
         """
-        test_root = data_dir + '/test/VOCdevkit/VOC2007'
-        self.test_samples  = self.__build_sample_list(test_root, 'test')
+        test_root = data_dir + '/test/VOCdevkit/VOC2012'
+        self.test_samples  = self.__build_sample_list(test_root, 'test_VOC2012')
 
         if len(self.test_samples) == 0:
             raise RuntimeError('No testing samples found in ' + data_dir)
