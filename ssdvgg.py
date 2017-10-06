@@ -90,6 +90,7 @@ class SSDVGG:
         self.preset = preset
         self.session = session
         self.__built = False
+        self.__build_names()
 
     #---------------------------------------------------------------------------
     def build_from_vgg(self, vgg_dir, num_classes, a_trous=True,
@@ -594,28 +595,36 @@ class SSDVGG:
         }
 
     #---------------------------------------------------------------------------
-    def build_summaries(self):
+    def __build_names(self):
         #-----------------------------------------------------------------------
-        # Get all the scopes with filters
+        # Names of the original and new scopes
         #-----------------------------------------------------------------------
-        names = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', 'conv3_1',
-                 'conv3_2', 'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3',
-                 'conv5_1', 'conv5_2', 'conv5_3', 'mod_conv6', 'mod_conv7',
-                 'conv8_1', 'conv8_2', 'conv9_1', 'conv9_2', 'conv10_1',
-                 'conv10_2', 'conv11_1', 'conv11_2']
+        self.original_scopes = [
+            'conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', 'conv3_1', 'conv3_2',
+            'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3', 'conv5_1', 'conv5_2',
+            'conv5_3', 'mod_conv6', 'mod_conv7'
+        ]
+
+        self.new_scopes = [
+            'conv8_1', 'conv8_2', 'conv9_1', 'conv9_2', 'conv10_1', 'conv10_2',
+            'conv11_1', 'conv11_2'
+        ]
 
         if self.preset.num_maps == 7:
-            names += ['conv12_1', 'conv12_2']
+            self.new_scopes += ['conv12_1', 'conv12_2']
 
         for i in range(self.preset.num_maps):
             for j in range(5):
-                names.append('classifiers/classifier{}_{}'.format(i, j))
+                self.new_scopes.append('classifiers/classifier{}_{}'.format(i, j))
             if i < self.preset.num_maps-1:
-                names.append('classifiers/classifier{}_{}'.format(i, 5))
+                self.new_scopes.append('classifiers/classifier{}_{}'.format(i, 5))
 
+    #---------------------------------------------------------------------------
+    def build_summaries(self):
         #-----------------------------------------------------------------------
         # Build the filter summaries
         #-----------------------------------------------------------------------
+        names = self.original_scopes + self.new_scopes
         sess = self.session
         with tf.variable_scope('filter_summaries'):
             summaries = []
