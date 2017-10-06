@@ -251,6 +251,8 @@ def main():
 
                 training_loss.add(loss_batch, x.shape[0])
 
+                if e == 0: continue
+
                 for i in range(result.shape[0]):
                     boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
                     boxes = suppress_overlaps(boxes)
@@ -271,6 +273,8 @@ def main():
                                               feed_dict=feed)
 
                 validation_loss.add(loss_batch,  x.shape[0])
+
+                if e == 0: continue
 
                 for i in range(result.shape[0]):
                     boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
