@@ -36,6 +36,9 @@ def APs2mAP(aps):
     for _, v in aps.items():
         sum_ap += v
         num_classes += 1
+
+    if num_classes == 0:
+        return 0
     return sum_ap/num_classes
 
 #-------------------------------------------------------------------------------
