@@ -181,6 +181,8 @@ class PrecisionSummary:
 
     #---------------------------------------------------------------------------
     def push(self, epoch, mAP, APs):
+        if not APs: return
+
         feed = {self.mAP_placeholder: mAP}
         tensors = [self.mAP_summary_op]
         for label in self.labels:
