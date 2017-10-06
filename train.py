@@ -174,12 +174,12 @@ def main():
             ret = compute_lr(args.learning_rate, args.lr_drop,  n_train_batches)
             learning_rate, global_step = ret
 
-        net = SSDVGG(sess)
+        net = SSDVGG(sess, td.preset)
         if start_epoch != 0:
             net.build_from_metagraph(metagraph_file, checkpoint_file)
             net.build_optimizer_from_metagraph()
         else:
-            net.build_from_vgg(args.vgg_dir, td.num_classes, td.preset)
+            net.build_from_vgg(args.vgg_dir, td.num_classes)
             net.build_optimizer(learning_rate, global_step)
 
         #-----------------------------------------------------------------------

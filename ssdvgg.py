@@ -86,12 +86,13 @@ def l2_normalization(x, initial_scale, channels, name):
 #-------------------------------------------------------------------------------
 class SSDVGG:
     #---------------------------------------------------------------------------
-    def __init__(self, session):
+    def __init__(self, session, preset):
+        self.preset = preset
         self.session = session
         self.__built = False
 
     #---------------------------------------------------------------------------
-    def build_from_vgg(self, vgg_dir, num_classes, preset, a_trous=True,
+    def build_from_vgg(self, vgg_dir, num_classes, a_trous=True,
                        progress_hook='tqdm'):
         """
         Build the model for training based on a pre-define vgg16 model.
@@ -135,8 +136,18 @@ class SSDVGG:
         """
         sess = self.session
         self.loss = sess.graph.get_tensor_by_name('total_loss/loss:0')
+        self.localization_loss = sess.graph.get_tensor_by_name('localization_loss/localization_loss:0')
+        self.confidence_loss = sess.graph.get_tensor_by_name('confidence_loss/confidence_loss:0')
+        self.l2_loss = sess.graph.get_tensor_by_name('total_loss/l2_loss:0')
         self.optimizer = sess.graph.get_operation_by_name('optimizer/minimizer')
         self.labels = sess.graph.get_tensor_by_name('labels:0')
+
+        self.losses = {
+            'total': self.loss,
+            'localization': self.localization_loss,
+            'confidence': self.confidence_loss,
+            'l2': self.l2_loss
+        }
 
     #---------------------------------------------------------------------------
     def __download_vgg(self, vgg_dir, progress_hook):
@@ -596,10 +607,10 @@ class SSDVGG:
         if self.preset.num_maps == 7:
             names += ['conv12_1', 'conv12_2']
 
-        for i in range(len(self.__maps)):
+        for i in range(self.preset.num_maps):
             for j in range(5):
                 names.append('classifiers/classifier{}_{}'.format(i, j))
-            if i < len(self.__maps)-1:
+            if i < self.preset.num_maps-1:
                 names.append('classifiers/classifier{}_{}'.format(i, 5))
 
         #-----------------------------------------------------------------------
