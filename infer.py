@@ -185,7 +185,7 @@ def main():
 
     with tf.Session() as sess:
         print('[i] Creating the model...')
-        net = SSDVGG(sess)
+        net = SSDVGG(sess, preset)
         net.build_from_metagraph(metagraph_file, checkpoint_file)
 
         #-----------------------------------------------------------------------
