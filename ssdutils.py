@@ -45,7 +45,7 @@ SSD_PRESETS = {
                                        Size( 1,  1)],
                         num_anchors = 11639,
                         scale_min   = 0.1,
-                        scale_max   = 0.9),
+                        scale_max   = 0.95),
     'vgg512': SSDPreset(name        = 'vgg512',
                         image_size = Size(512, 512),
                         num_maps    = 7,
@@ -58,7 +58,7 @@ SSD_PRESETS = {
                                        Size( 2,  2)],
                         num_anchors = 32972,
                         scale_min   = 0.07,
-                        scale_max   = 0.9),
+                        scale_max   = 0.95),
 }
 
 #-------------------------------------------------------------------------------
