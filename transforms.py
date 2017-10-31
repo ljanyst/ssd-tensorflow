@@ -223,13 +223,6 @@ def transform_box(box, orig_size, new_size, h_off, w_off):
     if new_cy < 0 or new_cy >= new_size.h:
         return None
 
-    #---------------------------------------------------------------------------
-    # Normalize the boundries
-    #---------------------------------------------------------------------------
-    xmin = max(0, xmin)
-    xmax = min(new_size.w-1, xmax)
-    ymin = max(0, ymin)
-    ymax = min(new_size.h-1, ymax)
     center, size = abs2prop(xmin, xmax, ymin, ymax, new_size)
     return Box(box.label, box.labelid, center, size)
 
