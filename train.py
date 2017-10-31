@@ -218,7 +218,7 @@ def main():
         #-----------------------------------------------------------------------
         # Get the initial snapshot of the network
         #-----------------------------------------------------------------------
-        net_summary_ops = net.build_summaries()
+        net_summary_ops = net.build_summaries(restore)
         if start_epoch == 0:
             net_summary = sess.run(net_summary_ops)
             summary_writer.add_summary(net_summary, 0)
