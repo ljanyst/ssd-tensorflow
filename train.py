@@ -36,21 +36,11 @@ from utils import *
 from tqdm import tqdm
 
 #-------------------------------------------------------------------------------
-def compute_lr(initial_lr, lr_drop, num_batches):
-    lr_drop = lr_drop.split(',')
-    lr_drop = [x.split(':') for x in lr_drop]
-    lr_drop = [(int(x), float(y)) for x, y in lr_drop]
-
-    values = [initial_lr]
-    boundaries = []
-    for drop in lr_drop:
-        boundaries.append(drop[0]*num_batches)
-        values.append(drop[1])
-
+def compute_lr(initial_lr, decay_factor, num_batches):
     with tf.variable_scope('learning_rate'):
         global_step = tf.Variable(0, trainable=False, name='global_step')
-        lr = tf.train.piecewise_constant(global_step, boundaries, values)
-
+        lr = tf.train.exponential_decay(initial_lr, global_step,
+                                        num_batches, decay_factor, staircase=True)
     return lr, global_step
 
 #-------------------------------------------------------------------------------
@@ -75,8 +65,12 @@ def main():
                         help='checkpoint interval')
     parser.add_argument('--learning-rate', type=float, default=0.001,
                         help='learning rate')
-    parser.add_argument('--lr-drop', default="95:0.0001,120:0.00001",
-                        help='learning rate drops: epoch1:new_lr1,epoch2:new_lr2')
+    parser.add_argument('--lr-decay-factor', type=float, default=0.97,
+                        help='learning rate decay factor')
+    parser.add_argument('--opt-epsilon', type=float, default=0.1,
+                        help='epsilon parameter of Adam optimizer')
+    parser.add_argument('--weight-decay', type=float, default=0.0005,
+                        help='L2 normalization factor')
     parser.add_argument('--continue-training', type=str2bool, default='False',
                         help='continue training from the latest checkpoint')
     parser.add_argument('--num-workers', type=int, default=mp.cpu_count(),
@@ -92,7 +86,9 @@ def main():
     print('[i] Tensorboard directory:', args.tensorboard_dir)
     print('[i] Checkpoint interval:  ', args.checkpoint_interval)
     print('[i] Learning rate:        ', args.learning_rate)
-    print('[i] Learning rate drop:   ', args.lr_drop)
+    print('[i] Learning rate decay:  ', args.lr_decay_factor)
+    print('[i] Optimizer  epsilon:   ', args.opt_epsilon)
+    print('[i] Weight decay:         ', args.weight_decay)
     print('[i] Continue:             ', args.continue_training)
     print('[i] Number of workers:    ', args.num_workers)
 
@@ -170,8 +166,9 @@ def main():
 
         learning_rate = args.learning_rate
         global_step = None
-        if args.lr_drop and start_epoch == 0:
-            ret = compute_lr(args.learning_rate, args.lr_drop,  n_train_batches)
+        if start_epoch == 0:
+            ret = compute_lr(args.learning_rate, args.lr_decay_factor,
+                             n_train_batches)
             learning_rate, global_step = ret
 
         net = SSDVGG(sess, td.preset)
@@ -180,7 +177,12 @@ def main():
             net.build_optimizer_from_metagraph()
         else:
             net.build_from_vgg(args.vgg_dir, td.num_classes)
-            net.build_optimizer(learning_rate, global_step)
+            net.build_optimizer(learning_rate=learning_rate,
+                                global_step=global_step,
+                                weight_decay=args.weight_decay,
+                                epsilon=args.opt_epsilon)
+
+        initialize_uninitialized_variables(sess)
 
         #-----------------------------------------------------------------------
         # Create various helpers
@@ -188,8 +190,6 @@ def main():
         summary_writer = tf.summary.FileWriter(args.tensorboard_dir,
                                                sess.graph)
         saver = tf.train.Saver(max_to_keep=20)
-
-        initialize_uninitialized_variables(sess)
 
         anchors = get_anchors_for_preset(td.preset)
         training_ap_calc = APCalculator()
