@@ -173,7 +173,7 @@ def main():
         for sample in samples:
             files.append(sample.filename)
 
-    if args.annotate and not source:
+    if not source:
         if args.files:
             files = args.files
 
