@@ -139,7 +139,7 @@ class SSDVGG:
         self.localization_loss = sess.graph.get_tensor_by_name('localization_loss/localization_loss:0')
         self.confidence_loss = sess.graph.get_tensor_by_name('confidence_loss/confidence_loss:0')
         self.l2_loss = sess.graph.get_tensor_by_name('total_loss/l2_loss:0')
-        self.optimizer = sess.graph.get_operation_by_name('optimizer/minimizer')
+        self.optimizer = sess.graph.get_operation_by_name('optimizer/optimizer')
         self.labels = sess.graph.get_tensor_by_name('labels:0')
 
         self.losses = {
@@ -368,8 +368,9 @@ class SSDVGG:
                                         axis=-1, name='result')
 
     #---------------------------------------------------------------------------
-    def build_optimizer(self, learning_rate=0.0005, global_step = None,
-                        weight_decay=0.0005, momentum=0.9):
+    def build_optimizer(self, learning_rate=0.001, weight_decay=0.0005,
+                        epsilon=0.1, global_step=None):
+
         self.labels = tf.placeholder(tf.float32, name='labels',
                                     shape=[None, None, self.num_vars])
 
@@ -578,9 +579,9 @@ class SSDVGG:
         # Build the optimizer
         #-----------------------------------------------------------------------
         with tf.variable_scope('optimizer'):
-            optimizer = tf.train.MomentumOptimizer(learning_rate, momentum)
-            optimizer = optimizer.minimize(self.loss, name='minimizer',
-                                           global_step=global_step)
+            optimizer = tf.train.AdamOptimizer(learning_rate, epsilon=epsilon)
+            optimizer = optimizer.minimize(self.loss, global_step=global_step,
+                                           name='optimizer')
 
         #-----------------------------------------------------------------------
         # Store the tensors
