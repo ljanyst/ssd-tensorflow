@@ -254,7 +254,7 @@ def main():
                 if e == 0: continue
 
                 for i in range(result.shape[0]):
-                    boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
+                    boxes = decode_boxes(result[i], anchors, 0.5, td.lid2name)
                     boxes = suppress_overlaps(boxes)
                     training_ap_calc.add_detections(gt_boxes[i], boxes)
 
@@ -277,7 +277,7 @@ def main():
                 if e == 0: continue
 
                 for i in range(result.shape[0]):
-                    boxes = decode_boxes(result[i], anchors, 0.01, td.lid2name)
+                    boxes = decode_boxes(result[i], anchors, 0.5, td.lid2name)
                     boxes = suppress_overlaps(boxes)
                     validation_ap_calc.add_detections(gt_boxes[i], boxes)
 
