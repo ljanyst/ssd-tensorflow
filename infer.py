@@ -76,6 +76,8 @@ def main():
                         help='Use test files from the data source')
     parser.add_argument('--batch-size', type=int, default=32,
                         help='batch size')
+    parser.add_argument('--sample', default='test',
+                        choices=['test', 'trainval'], help='sample to run on')
     args = parser.parse_args()
 
     #---------------------------------------------------------------------------
@@ -89,6 +91,7 @@ def main():
     print('[i] Output directory:  ', args.output_dir)
     print('[i] Annotate:          ', args.annotate)
     print('[i] Dump predictions:  ', args.dump_predictions)
+    print('[i] Sample:            ', args.sample)
 
     #---------------------------------------------------------------------------
     # Check if we can get the checkpoint
@@ -135,8 +138,15 @@ def main():
         print('[i] Configuring the data source...')
         try:
             source = load_data_source(args.data_source)
-            source.load_test_data(args.data_dir)
-            print('[i] # testing samples: ', source.num_test)
+            if args.sample == 'test':
+                source.load_test_data(args.data_dir)
+                num_samples = source.num_test
+                samples     = source.test_samples
+            else:
+                source.load_trainval_data(args.data_dir, 0)
+                num_samples = source.num_train
+                samples = source.train_samples
+            print('[i] # samples:         ', num_samples)
             print('[i] # classes:         ', source.num_classes)
         except (ImportError, AttributeError, RuntimeError) as e:
             print('[!] Unable to load data source:', str(e))
@@ -152,7 +162,7 @@ def main():
     files = []
 
     if source:
-        for sample in source.test_samples:
+        for sample in samples:
             files.append(sample.filename)
 
     if args.annotate and not source:
@@ -205,8 +215,8 @@ def main():
             # Process the predictions
             #-------------------------------------------------------------------
             for i in range(enc_boxes.shape[0]):
-                boxes = decode_boxes(enc_boxes[i], anchors, 0.01, lid2name)
-                boxes = suppress_overlaps(boxes)
+                boxes = decode_boxes(enc_boxes[i], anchors, 0.5, lid2name, None)
+                boxes = suppress_overlaps(boxes)[:200]
                 filename = files[idxs[i]]
                 basename = os.path.basename(filename)
 
@@ -231,8 +241,7 @@ def main():
                 # Add predictions to the stats calculator
                 #---------------------------------------------------------------
                 if compute_stats:
-                    ap_calc.add_detections(source.test_samples[idxs[i]].boxes,
-                                           boxes)
+                    ap_calc.add_detections(samples[idxs[i]].boxes, boxes)
 
     #---------------------------------------------------------------------------
     # Compute and print the stats
