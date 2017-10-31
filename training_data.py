@@ -145,7 +145,7 @@ class TrainingData:
                 label_template = np.zeros((batch_size, self.preset.num_anchors,
                                            self.num_classes+5),
                                           dtype=np.float32)
-                max_size = num_workers*2
+                max_size = num_workers*5
                 n_batches = int(math.ceil(len(sample_list_)/batch_size))
                 sample_queue = mp.Queue(n_batches)
                 batch_queue = DataQueue(img_template, label_template, max_size)
