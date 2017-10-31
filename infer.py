@@ -78,6 +78,9 @@ def main():
                         help='batch size')
     parser.add_argument('--sample', default='test',
                         choices=['test', 'trainval'], help='sample to run on')
+    parser.add_argument('--threshold', type=float, default=0.5,
+                        help='confidence threshold')
+
     args = parser.parse_args()
 
     #---------------------------------------------------------------------------
@@ -92,6 +95,7 @@ def main():
     print('[i] Annotate:          ', args.annotate)
     print('[i] Dump predictions:  ', args.dump_predictions)
     print('[i] Sample:            ', args.sample)
+    print('[i] Threshold:         ', args.threshold)
 
     #---------------------------------------------------------------------------
     # Check if we can get the checkpoint
@@ -215,7 +219,8 @@ def main():
             # Process the predictions
             #-------------------------------------------------------------------
             for i in range(enc_boxes.shape[0]):
-                boxes = decode_boxes(enc_boxes[i], anchors, 0.5, lid2name, None)
+                boxes = decode_boxes(enc_boxes[i], anchors, args.threshold,
+                                     lid2name, None)
                 boxes = suppress_overlaps(boxes)[:200]
                 filename = files[idxs[i]]
                 basename = os.path.basename(filename)
