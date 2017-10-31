@@ -177,20 +177,20 @@ def compute_overlap(box_arr, anchors_arr, threshold):
 #-------------------------------------------------------------------------------
 def compute_location(box, anchor):
     arr = np.zeros((4))
-    arr[0] = (box.center.x-anchor.center.x)/anchor.size.w
-    arr[1] = (box.center.y-anchor.center.y)/anchor.size.h
-    arr[2] = log(box.size.w/anchor.size.w)
-    arr[3] = log(box.size.h/anchor.size.h)
+    arr[0] = (box.center.x-anchor.center.x)/anchor.size.w*10
+    arr[1] = (box.center.y-anchor.center.y)/anchor.size.h*10
+    arr[2] = log(box.size.w/anchor.size.w)*5
+    arr[3] = log(box.size.h/anchor.size.h)*5
     return arr
 
 #-------------------------------------------------------------------------------
 def decode_location(box, anchor):
     box[box > 100] = 100 # only happens early training
 
-    x = box[0] * anchor.size.w + anchor.center.x
-    y = box[1] * anchor.size.h + anchor.center.y
-    w = exp(box[2]) * anchor.size.w
-    h = exp(box[3]) * anchor.size.h
+    x = box[0]/10 * anchor.size.w + anchor.center.x
+    y = box[1]/10 * anchor.size.h + anchor.center.y
+    w = exp(box[2]/5) * anchor.size.w
+    h = exp(box[3]/5) * anchor.size.h
     return Point(x, y), Size(w, h)
 
 #-------------------------------------------------------------------------------
