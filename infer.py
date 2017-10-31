@@ -30,6 +30,7 @@ import tensorflow as tf
 import numpy as np
 
 from average_precision import APCalculator, APs2mAP
+from pascal_summary import PascalSummary
 from ssdutils import get_anchors_for_preset, decode_boxes, suppress_overlaps
 from ssdvgg import SSDVGG
 from utils import str2bool, load_data_source, draw_box
@@ -80,6 +81,8 @@ def main():
                         choices=['test', 'trainval'], help='sample to run on')
     parser.add_argument('--threshold', type=float, default=0.5,
                         help='confidence threshold')
+    parser.add_argument('--pascal-summary', type=str2bool, default='False',
+                        help='dump the detections in Pascal VOC format')
 
     args = parser.parse_args()
 
@@ -96,6 +99,7 @@ def main():
     print('[i] Dump predictions:  ', args.dump_predictions)
     print('[i] Sample:            ', args.sample)
     print('[i] Threshold:         ', args.threshold)
+    print('[i] Pascal summary:    ', args.pascal_summary)
 
     #---------------------------------------------------------------------------
     # Check if we can get the checkpoint
@@ -197,6 +201,9 @@ def main():
     if compute_stats:
         ap_calc = APCalculator()
 
+    if args.pascal_summary:
+        pascal_summary = PascalSummary()
+
     with tf.Session() as sess:
         print('[i] Creating the model...')
         net = SSDVGG(sess, preset)
@@ -243,10 +250,14 @@ def main():
                     np.save(raw_fn, enc_boxes[i])
 
                 #---------------------------------------------------------------
-                # Add predictions to the stats calculator
+                # Add predictions to the stats calculator and to the Pascal
+                # summary
                 #---------------------------------------------------------------
                 if compute_stats:
                     ap_calc.add_detections(samples[idxs[i]].boxes, boxes)
+
+                if args.pascal_summary:
+                    pascal_summary.add_detections(filename, boxes)
 
     #---------------------------------------------------------------------------
     # Compute and print the stats
@@ -256,6 +267,12 @@ def main():
         for k, v in aps.items():
             print('[i] AP [{0}]: {1:.3f}'.format(k, v))
         print('[i] mAP: {0:.3f}'.format(APs2mAP(aps)))
+
+    #---------------------------------------------------------------------------
+    # Write the pascal summary files
+    #---------------------------------------------------------------------------
+    if args.pascal_summary:
+        pascal_summary.write_summary(args.output_dir)
 
     print('[i] All done.')
     return 0
