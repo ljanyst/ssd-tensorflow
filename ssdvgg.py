@@ -619,7 +619,10 @@ class SSDVGG:
                 self.new_scopes.append('classifiers/classifier{}_{}'.format(i, 5))
 
     #---------------------------------------------------------------------------
-    def build_summaries(self):
+    def build_summaries(self, restore):
+        if restore:
+            return self.session.graph.get_tensor_by_name('net_summaries/net_summaries:0')
+
         #-----------------------------------------------------------------------
         # Build the filter summaries
         #-----------------------------------------------------------------------
@@ -640,4 +643,4 @@ class SSDVGG:
             summary = tf.summary.histogram('l2_norm_conv4_3', tensor)
             summaries.append(summary)
 
-        return tf.summary.merge(summaries)
+        return tf.summary.merge(summaries, name='net_summaries')
