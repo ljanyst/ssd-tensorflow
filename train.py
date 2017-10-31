@@ -264,7 +264,7 @@ def main():
             #-------------------------------------------------------------------
             # Validate
             #-------------------------------------------------------------------
-            generator = td.valid_generator(args.batch_size)
+            generator = td.valid_generator(args.batch_size, args.num_workers)
 
             for x, y, gt_boxes in generator:
                 feed = {net.image_input: x,
