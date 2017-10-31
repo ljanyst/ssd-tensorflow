@@ -105,15 +105,6 @@ class PascalVOCSource:
                 objects  = doc.xpath('/annotation/object')
                 for obj in objects:
                     #-----------------------------------------------------------
-                    # Skip dificult detections if we have them labelled
-                    #-----------------------------------------------------------
-                    difficult = obj.xpath('difficult')
-                    if difficult:
-                        difficult = int(difficult[0].text)
-                        if difficult:
-                            continue
-
-                    #-----------------------------------------------------------
                     # Get the properties of the box and convert them to the
                     # proportional terms
                     #-----------------------------------------------------------
