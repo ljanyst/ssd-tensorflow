@@ -148,8 +148,10 @@ class PascalVOCSource:
 
         if len(self.train_samples) == 0:
             raise RuntimeError('No training samples found in ' + data_dir)
-        if len(self.valid_samples) == 0:
-            raise RuntimeError('No validation samples found in ' + data_dir)
+
+        if valid_fraction > 0:
+            if len(self.valid_samples) == 0:
+                raise RuntimeError('No validation samples found in ' + data_dir)
 
         self.num_train = len(self.train_samples)
         self.num_valid = len(self.valid_samples)
