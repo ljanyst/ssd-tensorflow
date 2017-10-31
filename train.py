@@ -57,11 +57,11 @@ def main():
                         help='directory for the VGG-16 model')
     parser.add_argument('--epochs', type=int, default=10,
                         help='number of training epochs')
-    parser.add_argument('--batch-size', type=int, default=32,
+    parser.add_argument('--batch-size', type=int, default=8,
                         help='batch size')
     parser.add_argument('--tensorboard-dir', default="tb",
                         help='name of the tensorboard data directory')
-    parser.add_argument('--checkpoint-interval', type=int, default=50,
+    parser.add_argument('--checkpoint-interval', type=int, default=5,
                         help='checkpoint interval')
     parser.add_argument('--learning-rate', type=float, default=0.001,
                         help='learning rate')
