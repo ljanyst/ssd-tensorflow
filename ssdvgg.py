@@ -105,7 +105,6 @@ class SSDVGG:
         """
         self.num_classes = num_classes+1
         self.num_vars = num_classes+5
-        self.preset = preset
         self.l2_loss = 0
         self.__download_vgg(vgg_dir, progress_hook)
         self.__load_vgg(vgg_dir)
