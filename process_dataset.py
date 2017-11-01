@@ -164,6 +164,8 @@ def main():
     parser.add_argument('--preset', default='vgg300',
                         choices=['vgg300', 'vgg512'],
                         help="The neural network preset")
+    parser.add_argument('--process-test', type=str2bool, default='False',
+                        help="process the test dataset")
     args = parser.parse_args()
 
     print('[i] Data source:          ', args.data_source)
@@ -174,6 +176,7 @@ def main():
     print('[i] Annotate:             ', args.annotate)
     print('[i] Compute training data:', args.compute_td)
     print('[i] Preset:               ', args.preset)
+    print('[i] Process test dataset: ', args.process_test)
 
     #---------------------------------------------------------------------------
     # Load the data source
@@ -182,7 +185,8 @@ def main():
     try:
         source = load_data_source(args.data_source)
         source.load_trainval_data(args.data_dir, args.validation_fraction)
-        source.load_test_data(args.data_dir)
+        if args.process_test:
+            source.load_test_data(args.data_dir)
         print('[i] # training samples:   ', source.num_train)
         print('[i] # validation samples: ', source.num_valid)
         print('[i] # testing samples:    ', source.num_test)
@@ -198,7 +202,8 @@ def main():
         print('[i] Annotating samples...')
         annotate(args.data_dir, source.train_samples, source.colors, 'train')
         annotate(args.data_dir, source.valid_samples, source.colors, 'valid')
-        annotate(args.data_dir, source.test_samples,  source.colors, 'test ')
+        if args.process_test:
+            annotate(args.data_dir, source.test_samples,  source.colors, 'test ')
 
     #---------------------------------------------------------------------------
     # Compute the training data
