@@ -298,6 +298,12 @@ class SSDVGG:
 
     #---------------------------------------------------------------------------
     def __build_ssd_layers(self):
+        stride10 = 1
+        padding10 = 'VALID'
+        if self.preset.num_maps >= 7:
+            stride10 = 2
+            padding10 = 'SAME'
+
         x, l2  = conv_map(self.mod_conv7,    256, 1, 1, 'conv8_1')
         self.ssd_conv8_1 = self.__with_loss(x, l2)
         x, l2 = conv_map(self.ssd_conv8_1,  512, 3, 2, 'conv8_2')
@@ -308,7 +314,7 @@ class SSDVGG:
         self.ssd_conv9_2 = self.__with_loss(x, l2)
         x, l2 = conv_map(self.ssd_conv9_2,  128, 1, 1, 'conv10_1')
         self.ssd_conv10_1 = self.__with_loss(x, l2)
-        x, l2 = conv_map(self.ssd_conv10_1, 256, 3, 1, 'conv10_2', 'VALID')
+        x, l2 = conv_map(self.ssd_conv10_1, 256, 3, stride10, 'conv10_2', padding10)
         self.ssd_conv10_2 = self.__with_loss(x, l2)
         x, l2 = conv_map(self.ssd_conv10_2, 128, 1, 1, 'conv11_1')
         self.ssd_conv11_1 = self.__with_loss(x, l2)
@@ -319,6 +325,8 @@ class SSDVGG:
             return
 
         x, l2 = conv_map(self.ssd_conv11_2, 128, 1, 1, 'conv12_1')
+        paddings = [[0, 0], [0, 1], [0, 1], [0, 0]]
+        x = tf.pad(x, paddings, "CONSTANT")
         self.ssd_conv12_1 = self.__with_loss(x, l2)
         x, l2 = conv_map(self.ssd_conv12_1, 256, 3, 1, 'conv12_2', 'VALID')
         self.ssd_conv12_2 = self.__with_loss(x, l2)
