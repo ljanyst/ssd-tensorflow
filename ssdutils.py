@@ -53,10 +53,10 @@ SSD_PRESETS = {
                                        Size(32, 32),
                                        Size(16, 16),
                                        Size( 8,  8),
-                                       Size( 6,  6),
                                        Size( 4,  4),
-                                       Size( 2,  2)],
-                        num_anchors = 32972,
+                                       Size( 2,  2),
+                                       Size( 1,  1)],
+                        num_anchors = 32765,
                         scale_min   = 0.07,
                         scale_max   = 0.95),
 }
