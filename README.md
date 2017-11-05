@@ -13,6 +13,8 @@ generic and easily extendable to any dataset, although I only tried it with
 [Pascal VOC][2] so far. All you need to do to introduce a new dataset is to
 create a new `source_xxxxxx.py` file defining it.
 
+Go [here][4] for more info.
+
 Pascal VOC Results
 ------------------
 
@@ -56,6 +58,7 @@ Have Fun!
 [1]: https://arxiv.org/pdf/1512.02325.pdf
 [2]: http://host.robots.ox.ac.uk/pascal/VOC/
 [3]: http://host.robots.ox.ac.uk:8080/anonymous/WKTCBE.html
+[4]: http://jany.st/post/2017-11-05-single-shot-detector-ssd-from-scratch-in-tensorflow.html
 
 [img1]: assets/000232.jpg
 [img2]: assets/000032.jpg
