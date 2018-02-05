@@ -53,6 +53,15 @@ results in the Pascal VOC compatible format using the inference script.
 
     ./infer.py --help
 
+To export the model to an inference optimize graph run:
+
+    ./export_model.py
+
+If you want to make detection basing on the inference model, check out:
+
+    ./detect.py
+
+
 Have Fun!
 
 [1]: https://arxiv.org/pdf/1512.02325.pdf
