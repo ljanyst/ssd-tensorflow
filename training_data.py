@@ -89,7 +89,13 @@ class TrainingData:
             labels = []
             gt_boxes = []
             for s in samples:
-                image, label, gt = run_transforms(s)
+                done = False
+                counter = 0
+                while not done and counter < 50:
+                    image, label, gt = run_transforms(s)
+                    num_bg = np.count_nonzero(label[:, self.num_classes])
+                    done = num_bg < label.shape[0]
+                    counter += 1
 
                 images.append(image.astype(np.float32))
                 labels.append(label.astype(np.float32))
