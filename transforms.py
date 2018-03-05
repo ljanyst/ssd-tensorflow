@@ -137,6 +137,28 @@ class RandomTransform(Transform):
         return data, label, gt
 
 #-------------------------------------------------------------------------------
+class ComposeTransform(Transform):
+    """
+    Call a bunch of transforms serially
+    Parameters: transforms
+    """
+    def __call__(self, data, label, gt):
+        args = (data, label, gt)
+        for t in self.transforms:
+            args = t(*args)
+        return args
+
+#-------------------------------------------------------------------------------
+class TransformPickerTransform(Transform):
+    """
+    Call a randomly chosen transform from the list
+    Parameters: transforms
+    """
+    def __call__(self, data, label, gt):
+        pick = random.randint(0, len(self.transforms)-1)
+        return self.transforms[pick](data, label, gt)
+
+#-------------------------------------------------------------------------------
 class BrightnessTransform(Transform):
     """
     Transform brightness
