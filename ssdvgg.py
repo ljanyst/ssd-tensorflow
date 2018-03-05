@@ -80,7 +80,7 @@ def array2tensor(x, name):
 def l2_normalization(x, initial_scale, channels, name):
     with tf.variable_scope(name):
         scale = array2tensor(initial_scale*np.ones(channels), 'scale')
-        x = scale*tf.nn.l2_normalize(x, dim=-1)
+        x = scale*tf.nn.l2_normalize(x, axis=-1)
     return x
 
 #-------------------------------------------------------------------------------
@@ -436,8 +436,8 @@ class SSDVGG:
         with tf.variable_scope('confidence_loss'):
             # Cross-entropy tensor - all of the values are non-negative
             # Shape: (batch_size, num_anchors)
-            ce = tf.nn.softmax_cross_entropy_with_logits(labels=gt_cl,
-                                                         logits=self.logits)
+            ce = tf.nn.softmax_cross_entropy_with_logits_v2(labels=gt_cl,
+                                                            logits=self.logits)
 
             #-------------------------------------------------------------------
             # Sum up the loss of all the positive anchors
