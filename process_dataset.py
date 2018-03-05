@@ -86,6 +86,24 @@ def build_train_transforms(preset, num_classes, sampler_trials, expand_prob):
     tf_saturation = SaturationTransform(lower=0.5, upper=1.5)
     tf_rnd_saturation = RandomTransform(prob=0.5, transform=tf_saturation)
 
+    tf_reorder_channels = ReorderChannelsTransform()
+    tf_rnd_reorder_channels = RandomTransform(prob=0.5,
+                                              transform=tf_reorder_channels)
+
+    #---------------------------------------------------------------------------
+    # Compositions of image distortions
+    #---------------------------------------------------------------------------
+    tf_distort_lst = [
+        tf_rnd_contrast,
+        tf_rnd_saturation,
+        tf_rnd_hue,
+        tf_rnd_contrast
+    ]
+    tf_distort_1 = ComposeTransform(transforms=tf_distort_lst[:-1])
+    tf_distort_2 = ComposeTransform(transforms=tf_distort_lst[1:])
+    tf_distort_comp = [tf_distort_1, tf_distort_2]
+    tf_distort = TransformPickerTransform(transforms=tf_distort_comp)
+
     #---------------------------------------------------------------------------
     # Expand sample
     #---------------------------------------------------------------------------
@@ -118,9 +136,8 @@ def build_train_transforms(preset, num_classes, sampler_trials, expand_prob):
     transforms = [
         ImageLoaderTransform(),
         tf_rnd_brightness,
-        tf_rnd_contrast,
-        tf_rnd_hue,
-        tf_rnd_saturation,
+        tf_distort,
+        tf_rnd_reorder_channels,
         tf_rnd_expand,
         tf_sample_picker,
         tf_rnd_flip,
