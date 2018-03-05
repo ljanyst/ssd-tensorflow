@@ -29,36 +29,36 @@ from math import sqrt, log, exp
 # It's done so that we don't have to build the whole network in memory in order
 # to pre-process the datasets.
 #-------------------------------------------------------------------------------
-SSDPreset = namedtuple('SSDPreset', ['name', 'image_size', 'num_maps',
-                                     'map_sizes', 'num_anchors', 'scale_min',
-                                     'scale_max'])
+SSDMap = namedtuple('SSDMap', ['size', 'scale', 'aspect_ratios'])
+SSDPreset = namedtuple('SSDPreset', ['name', 'image_size', 'maps',
+                                     'extra_scale', 'num_anchors'])
 
 SSD_PRESETS = {
-    'vgg300': SSDPreset(name        = 'vgg300',
-                        image_size  = Size(300, 300),
-                        num_maps    = 6,
-                        map_sizes   = [Size(38, 38),
-                                       Size(19, 19),
-                                       Size(10, 10),
-                                       Size( 5,  5),
-                                       Size( 3,  3),
-                                       Size( 1,  1)],
-                        num_anchors = 11639,
-                        scale_min   = 0.1,
-                        scale_max   = 0.95),
-    'vgg512': SSDPreset(name        = 'vgg512',
+    'vgg300': SSDPreset(name = 'vgg300',
+                        image_size = Size(300, 300),
+                        maps = [
+                            SSDMap(Size(38, 38), 0.1,   [2, 0.5]),
+                            SSDMap(Size(19, 19), 0.2,   [2, 3, 0.5, 1./3.]),
+                            SSDMap(Size(10, 10), 0.375, [2, 3, 0.5, 1./3.]),
+                            SSDMap(Size( 5,  5), 0.55,  [2, 3, 0.5, 1./3.]),
+                            SSDMap(Size( 3,  3), 0.725, [2, 0.5]),
+                            SSDMap(Size( 1,  1), 0.9,   [2, 0.5])
+                        ],
+                        extra_scale = 107.5,
+                        num_anchors = 8732),
+    'vgg512': SSDPreset(name = 'vgg512',
                         image_size = Size(512, 512),
-                        num_maps    = 7,
-                        map_sizes   = [Size(64, 64),
-                                       Size(32, 32),
-                                       Size(16, 16),
-                                       Size( 8,  8),
-                                       Size( 4,  4),
-                                       Size( 2,  2),
-                                       Size( 1,  1)],
-                        num_anchors = 32765,
-                        scale_min   = 0.07,
-                        scale_max   = 0.95),
+                        maps = [
+                            SSDMap(Size(64, 64), 0.07, [2, 0.5]),
+                            SSDMap(Size(32, 32), 0.15, [2, 3, 0.5, 1./3.]),
+                            SSDMap(Size(16, 16), 0.3,  [2, 3, 0.5, 1./3.]),
+                            SSDMap(Size( 8,  8), 0.45, [2, 3, 0.5, 1./3.]),
+                            SSDMap(Size( 4,  4), 0.6,  [2, 3, 0.5, 1./3.]),
+                            SSDMap(Size( 2,  2), 0.75, [2, 0.5]),
+                            SSDMap(Size( 1,  1), 0.9,  [2, 0.5])
+                        ],
+                        extra_scale = 105,
+                        num_anchors = 24564)
 }
 
 #-------------------------------------------------------------------------------
@@ -78,40 +78,34 @@ def get_anchors_for_preset(preset):
     Compute the default (anchor) boxes for the given SSD preset
     """
     #---------------------------------------------------------------------------
-    # Compute scales for each feature map
-    #---------------------------------------------------------------------------
-    scales = []
-    scale_diff = preset.scale_max - preset.scale_min
-    for k in range(1, preset.num_maps+1):
-        scale = preset.scale_min + scale_diff/(preset.num_maps-1)*(k-1)
-        scales.append(scale)
-
-    #---------------------------------------------------------------------------
     # Compute the width and heights of the anchor boxes for every scale
     #---------------------------------------------------------------------------
-    aspect_ratios = [1, 2, 3, 0.5, 1/3]
-    aspect_ratios = list(map(lambda x: sqrt(x), aspect_ratios))
+    box_sizes = []
+    for i in range(len(preset.maps)):
+        map_params = preset.maps[i]
+        s = map_params.scale
+        aspect_ratios = [1] + map_params.aspect_ratios
+        aspect_ratios = list(map(lambda x: sqrt(x), aspect_ratios))
 
-    box_sizes = {}
-    for i in range(len(scales)):
-        s = scales[i]
-        box_sizes[s] = []
+        sizes = []
         for ratio in aspect_ratios:
             w = s * ratio
             h = s / ratio
-            box_sizes[s].append((w, h))
-        if i < len(scales)-1:
-            s_prime = sqrt(scales[i]*scales[i+1])
-            box_sizes[s].append((s_prime, s_prime))
+            sizes.append((w, h))
+        if i < len(preset.maps)-1:
+            s_prime = sqrt(s*preset.maps[i+1].scale)
+        else:
+            s_prime = sqrt(s*preset.extra_scale)
+        sizes.append((s_prime, s_prime))
+        box_sizes.append(sizes)
 
     #---------------------------------------------------------------------------
     # Compute the actual boxes for every scale and feature map
     #---------------------------------------------------------------------------
     anchors = []
-    for k in range(len(scales)):
-        s  = scales[k]
-        fk = preset.map_sizes[k][0]
-        for size in box_sizes[s]:
+    for k in range(len(preset.maps)):
+        fk = preset.maps[k].size[0]
+        for size in box_sizes[k]:
             for j in range(fk):
                 y = (j+0.5)/float(fk)
                 for i in range(fk):
