@@ -300,7 +300,7 @@ class SSDVGG:
     def __build_ssd_layers(self):
         stride10 = 1
         padding10 = 'VALID'
-        if self.preset.num_maps >= 7:
+        if len(self.preset.maps) >= 7:
             stride10 = 2
             padding10 = 'SAME'
 
@@ -321,7 +321,7 @@ class SSDVGG:
         x, l2 = conv_map(self.ssd_conv11_1, 256, 3, 1, 'conv11_2', 'VALID')
         self.ssd_conv11_2 = self.__with_loss(x, l2)
 
-        if self.preset.num_maps < 7:
+        if len(self.preset.maps) < 7:
             return
 
         x, l2 = conv_map(self.ssd_conv11_2, 128, 1, 1, 'conv12_1')
@@ -346,7 +346,7 @@ class SSDVGG:
             self.ssd_conv10_2,
             self.ssd_conv11_2]
 
-        if self.preset.num_maps == 7:
+        if len(self.preset.maps) == 7:
             self.__maps.append(self.ssd_conv12_2)
 
     #---------------------------------------------------------------------------
@@ -354,14 +354,10 @@ class SSDVGG:
         with tf.variable_scope('classifiers'):
             self.__classifiers = []
             for i in range(len(self.__maps)):
-                fmap     = self.__maps[i]
-                map_size = self.preset.map_sizes[i]
-                for j in range(5):
-                    name    = 'classifier{}_{}'.format(i, j)
-                    clsfier, l2 = classifier(fmap, self.num_vars, map_size, name)
-                    self.__classifiers.append(self.__with_loss(clsfier, l2))
-                if i < len(self.__maps)-1:
-                    name    = 'classifier{}_{}'.format(i, 5)
+                fmap = self.__maps[i]
+                map_size = self.preset.maps[i].size
+                for j in range(2+len(self.preset.maps[i].aspect_ratios)):
+                    name = 'classifier{}_{}'.format(i, j)
                     clsfier, l2 = classifier(fmap, self.num_vars, map_size, name)
                     self.__classifiers.append(self.__with_loss(clsfier, l2))
 
@@ -618,14 +614,12 @@ class SSDVGG:
             'conv11_1', 'conv11_2'
         ]
 
-        if self.preset.num_maps == 7:
+        if len(self.preset.maps) == 7:
             self.new_scopes += ['conv12_1', 'conv12_2']
 
-        for i in range(self.preset.num_maps):
-            for j in range(5):
+        for i in range(len(self.preset.maps)):
+            for j in range(2+len(self.preset.maps[i].aspect_ratios)):
                 self.new_scopes.append('classifiers/classifier{}_{}'.format(i, j))
-            if i < self.preset.num_maps-1:
-                self.new_scopes.append('classifiers/classifier{}_{}'.format(i, 5))
 
     #---------------------------------------------------------------------------
     def build_summaries(self, restore):
