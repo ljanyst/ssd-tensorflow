@@ -241,7 +241,7 @@ def main():
                                        desc=description, unit='batches'):
 
                 if len(training_imgs_samples) < 3:
-                    saved_images = x[:3]
+                    saved_images = np.copy(x[:3])
 
                 feed = {net.image_input: x,
                         net.labels: y}
