@@ -223,6 +223,16 @@ class SaturationTransform(Transform):
         return data, label, gt
 
 #-------------------------------------------------------------------------------
+class ReorderChannelsTransform(Transform):
+    """
+    Reorder Image Channels
+    """
+    def __call__(self, data, label, gt):
+        channels = [0, 1, 2]
+        random.shuffle(channels)
+        return data[:, :,channels], label, gt
+
+#-------------------------------------------------------------------------------
 def transform_box(box, orig_size, new_size, h_off, w_off):
     #---------------------------------------------------------------------------
     # Compute the new coordinates of the box
