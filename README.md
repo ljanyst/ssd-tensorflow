@@ -54,7 +54,8 @@ results in the Pascal VOC compatible format using the inference script.
 
     ./infer.py --help
 
-To export the model to an inference optimize graph run:
+To export the model to an inference optimize graph run (use `result/result`
+as the name of the output tensor):
 
     ./export_model.py
 
