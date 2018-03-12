@@ -72,13 +72,16 @@ class PascalVOCSource:
         self.test_samples  = []
 
     #---------------------------------------------------------------------------
-    def __build_sample_list(self, root, dataset_name):
+    def __build_sample_list(self, root, dataset_name, dataset_type):
         """
         Build a list of samples for the VOC dataset (either trainval or test)
         """
         image_root  = root + '/JPEGImages/'
         annot_root  = root + '/Annotations/'
-        annot_files = glob(annot_root + '/*xml')
+        annot_files = []
+        with open(root + '/ImageSets/Main/' + dataset_type + '.txt') as f:
+            for line in f:
+                annot_files.append(annot_root + line.strip() + '.xml')
         samples     = []
 
         #-----------------------------------------------------------------------
@@ -137,9 +140,9 @@ class PascalVOCSource:
             trainval_root = data_dir + '/trainval/VOCdevkit/'+vocid
             trainval_name = 'trainval_'+vocid
             trainval_samples += self.__build_sample_list(trainval_root,
-                                                         trainval_name)
+                                                         trainval_name, 'trainval')
         test_root = data_dir + '/test/VOCdevkit/VOC2007'
-        trainval_samples  += self.__build_sample_list(test_root, 'test_VOC2007')
+        trainval_samples  += self.__build_sample_list(test_root, 'test_VOC2007', 'test')
 
         random.shuffle(trainval_samples)
         tvlen              = len(trainval_samples)
@@ -163,7 +166,7 @@ class PascalVOCSource:
         :param data_dir: the directory where the dataset's file are stored
         """
         test_root = data_dir + '/test/VOCdevkit/VOC2012'
-        self.test_samples  = self.__build_sample_list(test_root, 'test_VOC2012')
+        self.test_samples  = self.__build_sample_list(test_root, 'test_VOC2012', 'test')
 
         if len(self.test_samples) == 0:
             raise RuntimeError('No testing samples found in ' + data_dir)
