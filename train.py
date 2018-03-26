@@ -264,6 +264,9 @@ def main():
                                                   net.optimizer],
                                                  feed_dict=feed)
 
+                if math.isnan(loss_batch['confidence']):
+                    print('[!] Confidence loss is NaN.')
+
                 training_loss.add(loss_batch, x.shape[0])
 
                 if e == 0: continue
