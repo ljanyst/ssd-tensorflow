@@ -72,13 +72,25 @@ class PascalVOCSource:
         self.test_samples  = []
 
     #---------------------------------------------------------------------------
-    def __build_sample_list(self, root, dataset_name):
+    def __build_annotation_list(self, root, dataset_type):
+        """
+        Build a list of samples for the VOC dataset (either trainval or test)
+        """
+        annot_root  = root + '/Annotations/'
+        annot_files = []
+        with open(root + '/ImageSets/Main/' + dataset_type + '.txt') as f:
+            for line in f:
+                annot_file = annot_root + line.strip() + '.xml'
+                if os.path.exists(annot_file):
+                    annot_files.append(annot_file)
+        return annot_files
+
+    #---------------------------------------------------------------------------
+    def __build_sample_list(self, root, annot_files, dataset_name):
         """
         Build a list of samples for the VOC dataset (either trainval or test)
         """
         image_root  = root + '/JPEGImages/'
-        annot_root  = root + '/Annotations/'
-        annot_files = glob(annot_root + '/*xml')
         samples     = []
 
         #-----------------------------------------------------------------------
@@ -132,19 +144,37 @@ class PascalVOCSource:
                                as a validation sample
         """
 
-        trainval_samples = []
+        #-----------------------------------------------------------------------
+        # Process the samples defined in the relevant file lists
+        #-----------------------------------------------------------------------
+        train_annot = []
+        train_samples = []
         for vocid in ['VOC2007', 'VOC2012']:
-            trainval_root = data_dir + '/trainval/VOCdevkit/'+vocid
-            trainval_name = 'trainval_'+vocid
-            trainval_samples += self.__build_sample_list(trainval_root,
-                                                         trainval_name)
-        test_root = data_dir + '/test/VOCdevkit/VOC2007'
-        trainval_samples  += self.__build_sample_list(test_root, 'test_VOC2007')
+            root = data_dir + '/trainval/VOCdevkit/'+vocid
+            name = 'trainval_'+vocid
+            annot = self.__build_annotation_list(root, 'trainval')
+            train_annot += annot
+            train_samples += self.__build_sample_list(root, annot, name)
 
-        random.shuffle(trainval_samples)
-        tvlen              = len(trainval_samples)
-        self.valid_samples = trainval_samples[:int(valid_fraction*tvlen)]
-        self.train_samples = trainval_samples[int(valid_fraction*tvlen):]
+        root = data_dir + '/test/VOCdevkit/VOC2007'
+        annot = self.__build_annotation_list(root, 'test')
+        train_samples += self.__build_sample_list(root, annot, 'test_VOC2007')
+
+        #-----------------------------------------------------------------------
+        # We have some 5.5k annotated samples that are not on these lists, so
+        # we can use them for validation
+        #-----------------------------------------------------------------------
+        root = data_dir + '/trainval/VOCdevkit/VOC2012'
+        all_annot = set(glob(root + '/Annotations/*.xml'))
+        valid_annot = all_annot - set(train_annot)
+        valid_samples = self.__build_sample_list(root, valid_annot,
+                                                 'valid_VOC2012')
+
+        #-----------------------------------------------------------------------
+        # Final set up and sanity check
+        #-----------------------------------------------------------------------
+        self.valid_samples = valid_samples
+        self.train_samples = train_samples
 
         if len(self.train_samples) == 0:
             raise RuntimeError('No training samples found in ' + data_dir)
@@ -162,8 +192,10 @@ class PascalVOCSource:
         Load the test data
         :param data_dir: the directory where the dataset's file are stored
         """
-        test_root = data_dir + '/test/VOCdevkit/VOC2012'
-        self.test_samples  = self.__build_sample_list(test_root, 'test_VOC2012')
+        root = data_dir + '/test/VOCdevkit/VOC2012'
+        annot = self.__build_annotation_list(root, 'test')
+        self.test_samples  = self.__build_sample_list(root, annot,
+                                                      'test_VOC2012')
 
         if len(self.test_samples) == 0:
             raise RuntimeError('No testing samples found in ' + data_dir)
