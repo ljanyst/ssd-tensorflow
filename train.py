@@ -67,8 +67,8 @@ def main():
                         help='learning rate')
     parser.add_argument('--lr-decay-factor', type=float, default=0.97,
                         help='learning rate decay factor')
-    parser.add_argument('--opt-epsilon', type=float, default=0.1,
-                        help='epsilon parameter of Adam optimizer')
+    parser.add_argument('--momentum', type=float, default=0.9,
+                        help='momentum for the optimizer')
     parser.add_argument('--weight-decay', type=float, default=0.0005,
                         help='L2 normalization factor')
     parser.add_argument('--continue-training', type=str2bool, default='False',
@@ -87,7 +87,7 @@ def main():
     print('[i] Checkpoint interval:  ', args.checkpoint_interval)
     print('[i] Learning rate:        ', args.learning_rate)
     print('[i] Learning rate decay:  ', args.lr_decay_factor)
-    print('[i] Optimizer  epsilon:   ', args.opt_epsilon)
+    print('[i] Momentum:             ', args.momentum)
     print('[i] Weight decay:         ', args.weight_decay)
     print('[i] Continue:             ', args.continue_training)
     print('[i] Number of workers:    ', args.num_workers)
@@ -180,7 +180,7 @@ def main():
             net.build_optimizer(learning_rate=learning_rate,
                                 global_step=global_step,
                                 weight_decay=args.weight_decay,
-                                epsilon=args.opt_epsilon)
+                                momentum=args.momentum)
 
         initialize_uninitialized_variables(sess)
 
