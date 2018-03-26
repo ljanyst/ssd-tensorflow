@@ -164,6 +164,7 @@ def main():
     with tf.Session() as sess:
         print('[i] Creating the model...')
         n_train_batches = int(math.ceil(td.num_train/args.batch_size))
+        n_valid_batches = int(math.ceil(td.num_valid/args.batch_size))
 
         learning_rate = args.learning_rate
         global_step = None
@@ -250,7 +251,7 @@ def main():
             # Train
             #-------------------------------------------------------------------
             generator = td.train_generator(args.batch_size, args.num_workers)
-            description = '[i] Epoch {:>2}/{}'.format(e+1, args.epochs)
+            description = '[i] Train {:>2}/{}'.format(e+1, args.epochs)
             for x, y, gt_boxes in tqdm(generator, total=n_train_batches,
                                        desc=description, unit='batches'):
 
@@ -279,8 +280,10 @@ def main():
             # Validate
             #-------------------------------------------------------------------
             generator = td.valid_generator(args.batch_size, args.num_workers)
+            description = '[i] Valid {:>2}/{}'.format(e+1, args.epochs)
 
-            for x, y, gt_boxes in generator:
+            for x, y, gt_boxes in tqdm(generator, total=n_valid_batches,
+                                       desc=description, unit='batches'):
                 feed = {net.image_input: x,
                         net.labels: y}
                 result, loss_batch = sess.run([net.result, net.losses],
