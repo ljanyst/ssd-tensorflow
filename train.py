@@ -36,11 +36,10 @@ from utils import *
 from tqdm import tqdm
 
 #-------------------------------------------------------------------------------
-def compute_lr(initial_lr, decay_factor, num_batches):
+def compute_lr(lr_values, lr_boundaries):
     with tf.variable_scope('learning_rate'):
         global_step = tf.Variable(0, trainable=False, name='global_step')
-        lr = tf.train.exponential_decay(initial_lr, global_step,
-                                        num_batches, decay_factor, staircase=True)
+        lr = tf.train.piecewise_constant(global_step, lr_boundaries, lr_values)
     return lr, global_step
 
 #-------------------------------------------------------------------------------
@@ -65,8 +64,10 @@ def main():
                         help='checkpoint interval')
     parser.add_argument('--learning-rate', type=float, default=0.001,
                         help='learning rate')
-    parser.add_argument('--lr-decay-factor', type=float, default=0.97,
-                        help='learning rate decay factor')
+    parser.add_argument('--lr-values', type=str, default='0.001;0.0001;0.00001',
+                        help='learning rate values')
+    parser.add_argument('--lr-boundaries', type=str, default='320000;400000',
+                        help='learning rate chage boundaries (in batches)')
     parser.add_argument('--momentum', type=float, default=0.9,
                         help='momentum for the optimizer')
     parser.add_argument('--weight-decay', type=float, default=0.0005,
@@ -85,8 +86,8 @@ def main():
     print('[i] Batch size:           ', args.batch_size)
     print('[i] Tensorboard directory:', args.tensorboard_dir)
     print('[i] Checkpoint interval:  ', args.checkpoint_interval)
-    print('[i] Learning rate:        ', args.learning_rate)
-    print('[i] Learning rate decay:  ', args.lr_decay_factor)
+    print('[i] Learning rate values: ', args.lr_values)
+    print('[i] Learning rate boundaries: ', args.lr_boundaries)
     print('[i] Momentum:             ', args.momentum)
     print('[i] Weight decay:         ', args.weight_decay)
     print('[i] Continue:             ', args.continue_training)
@@ -167,8 +168,21 @@ def main():
         learning_rate = args.learning_rate
         global_step = None
         if start_epoch == 0:
-            ret = compute_lr(args.learning_rate, args.lr_decay_factor,
-                             n_train_batches)
+            lr_values = args.lr_values.split(';')
+            try:
+                lr_values = [float(x) for x in lr_values]
+            except ValueError:
+                print('[!] Learning rate values must be floats')
+                sys.exit(1)
+
+            lr_boundaries = args.lr_boundaries.split(';')
+            try:
+                lr_boundaries = [int(x) for x in lr_boundaries]
+            except ValueError:
+                print('[!] Learning rate boundaries must be ints')
+                sys.exit(1)
+
+            ret = compute_lr(lr_values, lr_boundaries)
             learning_rate, global_step = ret
 
         net = SSDVGG(sess, td.preset)
