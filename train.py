@@ -62,8 +62,6 @@ def main():
                         help='name of the tensorboard data directory')
     parser.add_argument('--checkpoint-interval', type=int, default=5,
                         help='checkpoint interval')
-    parser.add_argument('--learning-rate', type=float, default=0.001,
-                        help='learning rate')
     parser.add_argument('--lr-values', type=str, default='0.001;0.0001;0.00001',
                         help='learning rate values')
     parser.add_argument('--lr-boundaries', type=str, default='320000;400000',
@@ -166,7 +164,6 @@ def main():
         n_train_batches = int(math.ceil(td.num_train/args.batch_size))
         n_valid_batches = int(math.ceil(td.num_valid/args.batch_size))
 
-        learning_rate = args.learning_rate
         global_step = None
         if start_epoch == 0:
             lr_values = args.lr_values.split(';')
