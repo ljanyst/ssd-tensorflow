@@ -105,6 +105,7 @@ def get_anchors_for_preset(preset):
     anchors = []
     for k in range(len(preset.maps)):
         fk = preset.maps[k].size[0]
+        s = preset.maps[k].scale
         for size in box_sizes[k]:
             for j in range(fk):
                 y = (j+0.5)/float(fk)
