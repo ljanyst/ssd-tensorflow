@@ -62,7 +62,7 @@ def main():
                         help='name of the tensorboard data directory')
     parser.add_argument('--checkpoint-interval', type=int, default=5,
                         help='checkpoint interval')
-    parser.add_argument('--lr-values', type=str, default='0.001;0.0001;0.00001',
+    parser.add_argument('--lr-values', type=str, default='0.00075;0.0001;0.00001',
                         help='learning rate values')
     parser.add_argument('--lr-boundaries', type=str, default='320000;400000',
                         help='learning rate chage boundaries (in batches)')
