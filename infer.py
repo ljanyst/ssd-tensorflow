@@ -36,6 +36,10 @@ from ssdvgg import SSDVGG
 from utils import str2bool, load_data_source, draw_box
 from tqdm import tqdm
 
+if sys.version_info[0] < 3:
+    print("This is a Python 3 program. Use Python 3 or higher.")
+    sys.exit(1)
+
 #-------------------------------------------------------------------------------
 def sample_generator(samples, image_size, batch_size):
     image_size = (image_size.w, image_size.h)

@@ -31,6 +31,10 @@ from ssdutils import get_anchors_for_preset, decode_boxes, suppress_overlaps
 from utils import draw_box
 from tqdm import tqdm
 
+if sys.version_info[0] < 3:
+    print("This is a Python 3 program. Use Python 3 or higher.")
+    sys.exit(1)
+
 #-------------------------------------------------------------------------------
 # Start the show
 #-------------------------------------------------------------------------------

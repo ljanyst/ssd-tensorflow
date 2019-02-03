@@ -27,6 +27,10 @@ import tensorflow as tf
 
 from tensorflow.python.framework import graph_util
 
+if sys.version_info[0] < 3:
+    print("This is a Python 3 program. Use Python 3 or higher.")
+    sys.exit(1)
+
 #---------------------------------------------------------------------------
 # Parse the commandline
 #---------------------------------------------------------------------------

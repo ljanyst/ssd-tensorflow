@@ -32,6 +32,10 @@ from ssdutils import get_preset_by_name
 from utils import load_data_source, str2bool, draw_box
 from tqdm import tqdm
 
+if sys.version_info[0] < 3:
+    print("This is a Python 3 program. Use Python 3 or higher.")
+    sys.exit(1)
+
 #-------------------------------------------------------------------------------
 def annotate(data_dir, samples, colors, sample_name):
     """
