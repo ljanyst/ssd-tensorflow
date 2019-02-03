@@ -44,7 +44,7 @@ SSD_PRESETS = {
                             SSDMap(Size( 3,  3), 0.725, [2, 0.5]),
                             SSDMap(Size( 1,  1), 0.9,   [2, 0.5])
                         ],
-                        extra_scale = 107.5,
+                        extra_scale = 1.075,
                         num_anchors = 8732),
     'vgg512': SSDPreset(name = 'vgg512',
                         image_size = Size(512, 512),
@@ -57,7 +57,7 @@ SSD_PRESETS = {
                             SSDMap(Size( 2,  2), 0.75, [2, 0.5]),
                             SSDMap(Size( 1,  1), 0.9,  [2, 0.5])
                         ],
-                        extra_scale = 105,
+                        extra_scale = 1.05,
                         num_anchors = 24564)
 }
 
@@ -105,6 +105,7 @@ def get_anchors_for_preset(preset):
     anchors = []
     for k in range(len(preset.maps)):
         fk = preset.maps[k].size[0]
+        s = preset.maps[k].scale
         for size in box_sizes[k]:
             for j in range(fk):
                 y = (j+0.5)/float(fk)
