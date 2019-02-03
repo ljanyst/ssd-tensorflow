@@ -23,10 +23,10 @@ Images and numbers speak louder than a thousand words, so here they are:
 ![Example #1][img1]
 ![Example #2][img2]
 
-| Model  | Training data                    | mAP Train | mAP VOC12 test |
-|:------:|:--------------------------------:|:---------:|:--------------:|
-| vgg300 | VOC07+12 trainval and VOC07 Test |     79.9% |    [71.8%][3]  |
-| vgg512 | VOC07+12 trainval and VOC07 Test |     84.0% |    [75.0%][5]  |
+| Model  | Training data                    | mAP Train | mAP VOC12 test |Reference|
+|:------:|:--------------------------------:|:---------:|:--------------:|:-------:|
+| vgg300 | VOC07+12 trainval and VOC07 Test |     79.5% |    [72.3%][3]  |   72.4% |
+| vgg512 | VOC07+12 trainval and VOC07 Test |     82.3% |    [75.0%][5]  |   74.9% |
 
 Usage
 -----
@@ -68,9 +68,9 @@ Have Fun!
 
 [1]: https://arxiv.org/pdf/1512.02325.pdf
 [2]: http://host.robots.ox.ac.uk/pascal/VOC/
-[3]: http://host.robots.ox.ac.uk:8080/anonymous/C3DN60.html
+[3]: http://host.robots.ox.ac.uk:8080/anonymous/NEIZIN.html
 [4]: http://jany.st/post/2017-11-05-single-shot-detector-ssd-from-scratch-in-tensorflow.html
-[5]: http://host.robots.ox.ac.uk:8080/anonymous/CNQPDK.html
+[5]: http://host.robots.ox.ac.uk:8080/anonymous/FYP60C.html
 
 [img1]: assets/000232.jpg
 [img2]: assets/000032.jpg
