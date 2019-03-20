@@ -67,6 +67,8 @@ def main():
     parser.add_argument('--training-data',
                         default='pascal-voc/training-data.pkl',
                         help='Information about parameters used for training')
+    parser.add_argument('--data-source', default='pascal_voc',
+                        help='data source')
     parser.add_argument('--output-dir', default='test-output',
                         help='directory for the resulting images')
     parser.add_argument('--annotate', type=str2bool, default='False',

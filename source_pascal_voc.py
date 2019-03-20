@@ -192,10 +192,10 @@ class PascalVOCSource:
         Load the test data
         :param data_dir: the directory where the dataset's file are stored
         """
-        root = data_dir + '/test/VOCdevkit/VOC2012'
+        root = data_dir + '/test/VOCdevkit/VOC2007'
         annot = self.__build_annotation_list(root, 'test')
         self.test_samples  = self.__build_sample_list(root, annot,
-                                                      'test_VOC2012')
+                                                      'test_VOC2007')
 
         if len(self.test_samples) == 0:
             raise RuntimeError('No testing samples found in ' + data_dir)
